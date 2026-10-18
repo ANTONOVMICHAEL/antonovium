@@ -1,0 +1,5 @@
+project_id = "hmdjcxpogdrveddznedx"
+[functions.antonovium-library]
+verify_jwt = true
+[functions.antonovium-login]
+verify_jwt = false

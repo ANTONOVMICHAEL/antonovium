@@ -1,0 +1,11 @@
+{
+  "scope": "Local PDF.js parser/rendering and large-file range test. No Yandex upload was performed.",
+  "file_bytes": 69208147,
+  "range_bytes": 67667,
+  "checks": [
+    "A valid 66+ MiB PDF opens through range transport",
+    "The actual PDF text layer is extracted",
+    "An image-only scanned page renders without fabricating text",
+    "Metadata and the first two pages do not load the 66 MiB payload into the reader"
+  ]
+}

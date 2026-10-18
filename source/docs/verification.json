@@ -1,0 +1,82 @@
+{
+  "environment": "Happy DOM, production bundle. DOM behavior verified; no real browser geometry or visual QA.",
+  "checks": [
+    {
+      "name": "Cabinet renders with Cyrillic and opens the reader",
+      "status": "passed"
+    },
+    {
+      "name": "All reading modes preserve the active source and section",
+      "status": "passed"
+    },
+    {
+      "name": "A real DOM selection creates an anchored note and highlight",
+      "status": "passed"
+    },
+    {
+      "name": "Note edit keeps its source anchor",
+      "status": "passed"
+    },
+    {
+      "name": "Category round trip restores the reader and saved position",
+      "status": "passed"
+    },
+    {
+      "name": "All themes persist and recolor the complete token system",
+      "status": "passed"
+    },
+    {
+      "name": "Reload retains notes, mode, source, section, position and theme",
+      "status": "passed"
+    },
+    {
+      "name": "Document contents and comparison source selectors work",
+      "status": "passed"
+    },
+    {
+      "name": "Search finds actual user notes and opens the anchored location",
+      "status": "passed"
+    },
+    {
+      "name": "Wilkins exposes local context and honestly labels unavailable AI",
+      "status": "passed"
+    },
+    {
+      "name": "A new paper source immediately opens and supports a page-linked note",
+      "status": "passed"
+    },
+    {
+      "name": "User text is displayed literally, without executing HTML",
+      "status": "passed"
+    },
+    {
+      "name": "Research creation, automatic edits, archive and restore work",
+      "status": "passed"
+    },
+    {
+      "name": "Manuscript edits are retained after a fresh mount",
+      "status": "passed"
+    },
+    {
+      "name": "Free notes can be saved and reopened from the cabinet",
+      "status": "passed"
+    },
+    {
+      "name": "A multi-paragraph selection can be compared and saved with both anchors",
+      "status": "passed"
+    },
+    {
+      "name": "Text controls and focus mode update real reading settings",
+      "status": "passed"
+    },
+    {
+      "name": "Responsive styles and published production assets remain local",
+      "status": "passed"
+    },
+    {
+      "name": "The preserved original standalone backup starts independently",
+      "status": "passed"
+    }
+  ],
+  "runtimeErrors": []
+}

@@ -1,0 +1,9 @@
+{
+  "CORSRules": [{
+    "AllowedOrigins": ["https://antonovmichael.github.io"],
+    "AllowedMethods": ["GET", "HEAD", "PUT"],
+    "AllowedHeaders": ["Range", "Content-Type", "Content-Length", "Cache-Control", "x-amz-*"],
+    "ExposeHeaders": ["ETag", "Accept-Ranges", "Content-Range", "Content-Length", "Content-Type"],
+    "MaxAgeSeconds": 300
+  }]
+}

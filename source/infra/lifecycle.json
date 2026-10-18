@@ -1,0 +1,8 @@
+{
+  "Rules": [{
+    "ID": "abort-unfinished-library-uploads",
+    "Status": "Enabled",
+    "Filter": {"Prefix": ""},
+    "AbortIncompleteMultipartUpload": {"DaysAfterInitiation": 1}
+  }]
+}

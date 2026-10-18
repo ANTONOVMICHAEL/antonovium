@@ -1,0 +1,29 @@
+{
+  "cobalt": {
+    "text/background": 14.38,
+    "secondary/background": 5.16,
+    "primary/background": 7.19,
+    "secondary/context": 4.9,
+    "highlighted text": 12.56,
+    "hero secondary": 4.86,
+    "white/primary": 7.84
+  },
+  "plum": {
+    "text/background": 13.34,
+    "secondary/background": 5.28,
+    "primary/background": 8.31,
+    "secondary/context": 4.7,
+    "highlighted text": 10.65,
+    "hero secondary": 5.68,
+    "white/primary": 9.15
+  },
+  "emerald": {
+    "text/background": 12.62,
+    "secondary/background": 5.04,
+    "primary/background": 6.43,
+    "secondary/context": 4.65,
+    "highlighted text": 10.79,
+    "hero secondary": 4.8,
+    "white/primary": 7.08
+  }
+}

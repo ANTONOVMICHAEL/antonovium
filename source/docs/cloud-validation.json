@@ -1,0 +1,13 @@
+{
+  "scope": "Local parser, migration and source security checks; not a real cloud upload or independent browser sync test",
+  "checks": [
+    "FB2: Cyrillic metadata, nested chapters, formatting and footnote targets",
+    "FB2: XML entity declarations are rejected before parsing",
+    "FB2: scripts, handlers, remote images, javascript links and SVG do not reach the reader",
+    "FB2: structural text anchors survive a second independent parse",
+    "FB2: UTF-16 byte order is decoded correctly",
+    "Migration: both conflicting notes and their source/research links survive",
+    "Migration: repeated manuscript import is idempotent",
+    "Secrets: frontend and server source do not contain constant private credentials"
+  ]
+}
