@@ -5,6 +5,8 @@
     "FB2: XML entity declarations are rejected before parsing",
     "FB2: scripts, handlers, remote images, javascript links and SVG do not reach the reader",
     "FB2: structural text anchors survive a second independent parse",
+    "Reader: saved highlights survive inline formatting, chapter repaint and comments",
+    "Reader: a highlight spanning two paragraphs retains its exact quote",
     "FB2: UTF-16 byte order is decoded correctly",
     "Migration: both conflicting notes and their source/research links survive",
     "Migration: repeated manuscript import is idempotent",
