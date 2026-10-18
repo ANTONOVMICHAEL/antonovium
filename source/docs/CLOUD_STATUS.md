@@ -10,7 +10,7 @@ bookmarks, anchored notes, metadata editing, local workspace migration and
 version conflicts. Guest local data is kept under its original key; signed-in
 workspaces use separate user keys. No book is committed to GitHub.
 
-Deployed: four isolated RLS tables, two RPC functions and two Edge Functions in
+Deployed: four isolated RLS tables, three RPC functions and two Edge Functions in
 the existing Supabase Free project. Existing project tables are unchanged.
 
 Activation blockers:
@@ -23,13 +23,13 @@ Activation blockers:
   the GitHub Pages origin `https://antonovmichael.github.io` for GET, HEAD,
   and PUT; incomplete multipart uploads are aborted after 7 days. The bucket
   is empty (0 objects, 0 B). Dedicated service account
-  `antonovium-storage` (ID `ajeogf1vmhhg7bemj2tb`) has been created
-  without a folder role or access keys. Assigning `storage.editor` on this
-  bucket remains blocked by a Yandex Console TypeError in its role dialog;
-  Cloud Shell session connection also fails (2026-10-18). Do not broaden
-  access to the folder as a workaround. After a bucket-scoped role is assigned,
-  create a static access key and store `YC_BUCKET`, `YC_ACCESS_KEY_ID`,
-  `YC_SECRET_ACCESS_KEY` in Supabase Edge secrets. Never commit the key.
+  `antonovium-storage` (ID `ajeogf1vmhhg7bemj2tb`) has `storage.editor`
+  on this bucket only, verified on its permissions page. No static access key
+  has been created yet. Supabase Vault is ready to hold encrypted S3 credentials;
+  only the Edge Function's service role can execute the credentials RPC, and
+  execution by `anon` and `authenticated` is denied. Create a static key,
+  put the bucket name and key pair in Vault under
+  `antonovium_yc_s3_credentials`, and verify S3 access. Never commit the key.
 - Supabase Auth must allow the existing Pages URL as the sign-in redirect;
   new registrations should be disabled after the approved owner is verified.
 - Real PDF/FB2 uploads, expiring URLs, authorized foreign-owner denial and two
