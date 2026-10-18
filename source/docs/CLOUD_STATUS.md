@@ -24,12 +24,13 @@ Activation blockers:
   and PUT; incomplete multipart uploads are aborted after 7 days. The bucket
   is empty (0 objects, 0 B). Dedicated service account
   `antonovium-storage` (ID `ajeogf1vmhhg7bemj2tb`) has `storage.editor`
-  on this bucket only, verified on its permissions page. No static access key
-  has been created yet. Supabase Vault is ready to hold encrypted S3 credentials;
-  only the Edge Function's service role can execute the credentials RPC, and
-  execution by `anon` and `authenticated` is denied. Create a static key,
-  put the bucket name and key pair in Vault under
-  `antonovium_yc_s3_credentials`, and verify S3 access. Never commit the key.
+  on this bucket only, verified on its permissions page. A static key was
+  created and the bucket name and key pair were stored in Supabase Vault under
+  `antonovium_yc_s3_credentials`. Only the Edge Function's service role can
+  execute the credentials RPC; `anon` and `authenticated` have no execution
+  permission. A service-role SQL check confirmed all required fields. The
+  temporary transfer copy was deleted. Actual S3 access still needs an
+  authenticated application upload test. Never commit the key.
 - Supabase Auth must allow the existing Pages URL as the sign-in redirect;
   new registrations should be disabled after the approved owner is verified.
 - Real PDF/FB2 uploads, expiring URLs, authorized foreign-owner denial and two
