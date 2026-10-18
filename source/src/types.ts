@@ -12,7 +12,7 @@ export interface TextAnchor { paragraphId: string; start: number; end: number }
 export interface Excerpt { sourceId: string; sectionId: string; quote: string; anchors: TextAnchor[]; locator?: string; fileAnchor?:import('./cloud').FileAnchor;sourceTitle?:string }
 export interface Note extends Partial<Excerpt> {
   id: string; title: string; body: string; kind: NoteKind; categories: string[];
-  researchId?: string; createdAt: string; demo?: boolean;evidenceType?:'note'|'interpretation'|'hypothesis'|'quotation';
+  researchId?: string; createdAt: string; demo?: boolean;evidenceType?:'note'|'interpretation'|'hypothesis'|'quotation'|'highlight';
 }
 export interface Research { id: string; title: string; question: string; hypothesis: string; categories: string[]; archived: boolean; demo?: boolean }
 export interface Category { id: string; title: string; subtitle: string; x: number; y: number }
