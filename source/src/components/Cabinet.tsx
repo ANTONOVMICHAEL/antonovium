@@ -1,6 +1,7 @@
 import { useApp } from '../context';
 import { Arrow, Label } from './UI';
 import NoteList from './NoteList';
+import {CloudUploadButton} from './CloudBooks';
 export default function Cabinet(){
  const{state,update,openSource,navigate,openResearch,composeNote,openCategory}=useApp();
  const source=state.sources.find(s=>s.id===state.sourceId)??state.sources[0];
@@ -8,7 +9,7 @@ export default function Cabinet(){
  const number=String((source?.sections.findIndex(s=>s.id===section?.id)??0)+1).padStart(2,'0');
  const date=new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'long',weekday:'long',timeZone:'Europe/Saratov'}).format(new Date());
  return <main className="page cabinet page-enter" id="main"><div className="page-topline"><Label>Личное исследовательское пространство</Label><span>{date}</span></div>
- <div className="page-heading"><h1>Научный <em>кабинет</em><span className="title-period">.</span></h1><button className="button outline" onClick={()=>composeNote()}>Записать мысль <span>+</span></button></div>
+ <div className="page-heading"><h1>Научный <em>кабинет</em><span className="title-period">.</span></h1><div className="cloud-library-actions"><CloudUploadButton/><button className="button outline" onClick={()=>composeNote()}>Записать мысль <span>+</span></button></div></div>
  <div className="cabinet-lead"><section className="reading-feature" aria-label="Продолжить чтение"><div className="feature-top"><Label>{source?.format==='paper'?'Бумажное чтение':'На полях чтения'}</Label><span className="feature-index">SOURCE / {number}</span></div>
  <div className="reading-feature-content"><div className="feature-kicker">{source?.demo?'Демонстрационный источник':source?.author??'Моя библиотека'}</div><h2>{source?.title??'Место для первого источника'}</h2><p>{section?.title??'Заметки по своему изданию'}</p></div>
  <div className="feature-excerpt"><span className="excerpt-bracket">[</span><p>{section?.paragraphs[1]?.text.slice(0,169)??'Запиши мысль по книге и укажи страницу. Все заметки останутся связаны с конкретным источником.'}{section?.paragraphs[1]?'…':''}</p><span className="excerpt-bracket">]</span></div>
