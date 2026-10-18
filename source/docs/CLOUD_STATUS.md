@@ -29,8 +29,10 @@ Activation blockers:
   `antonovium_yc_s3_credentials`. Only the Edge Function's service role can
   execute the credentials RPC; `anon` and `authenticated` have no execution
   permission. A service-role SQL check confirmed all required fields. The
-  temporary transfer copy was deleted. Actual S3 access still needs an
-  authenticated application upload test. Never commit the key.
+  temporary transfer copy was deleted. A signed S3 ListObjectsV2 request
+  using the new key succeeded against the private bucket and returned zero
+  objects. Upload/write access still needs an authenticated application test.
+  Never commit the key.
 - Supabase Auth must allow the existing Pages URL as the sign-in redirect;
   new registrations should be disabled after the approved owner is verified.
 - Real PDF/FB2 uploads, expiring URLs, authorized foreign-owner denial and two
