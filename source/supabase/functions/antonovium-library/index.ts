@@ -8,7 +8,16 @@ const headers={'Access-Control-Allow-Origin':ORIGIN,'Access-Control-Allow-Header
 function fail(message:string,status=400):never{throw Object.assign(new Error(message),{status});}
 function check<T>(value:{data:T;error:unknown}):T{if(value.error)fail('Ошибка базы данных',500);return value.data;}
 const text=(v:unknown,max:number)=>typeof v==='string'?v.trim().slice(0,max):'';
-function storage(){const bucket=Deno.env.get('YC_BUCKET'),accessKeyId=Deno.env.get('YC_ACCESS_KEY_ID'),secretAccessKey=Deno.env.get('YC_SECRET_ACCESS_KEY');if(!bucket||!accessKeyId||!secretAccessKey)fail('Приватное хранилище еще не настроено. Загрузка не выполнена.',503);return {bucket:bucket!,s3:new S3Client({endpoint:'https://storage.yandexcloud.net',region:'ru-central1',credentials:{accessKeyId:accessKeyId!,secretAccessKey:secretAccessKey!},requestChecksumCalculation:'WHEN_REQUIRED',responseChecksumValidation:'WHEN_REQUIRED'})};}
+type StorageCredentials={bucket:string;access_key_id:string;secret_access_key:string};
+async function credentials():Promise<StorageCredentials|null>{
+ const bucket=Deno.env.get('YC_BUCKET'),access_key_id=Deno.env.get('YC_ACCESS_KEY_ID'),secret_access_key=Deno.env.get('YC_SECRET_ACCESS_KEY');
+ if(bucket&&access_key_id&&secret_access_key)return {bucket,access_key_id,secret_access_key};
+ const {data,error}=await admin.rpc('av_storage_credentials');
+ if(error)fail('Не удалось получить настройки хранилища',503);
+ if(!data||typeof data.bucket!=='string'||typeof data.access_key_id!=='string'||typeof data.secret_access_key!=='string'||!data.bucket||!data.access_key_id||!data.secret_access_key)return null;
+ return data as StorageCredentials;
+}
+async function storage(){const c=await credentials();if(!c)fail('Приватное хранилище еще не настроено. Загрузка не выполнена.',503);return {bucket:c.bucket,s3:new S3Client({endpoint:'https://storage.yandexcloud.net',region:'ru-central1',credentials:{accessKeyId:c.access_key_id,secretAccessKey:c.secret_access_key},requestChecksumCalculation:'WHEN_REQUIRED',responseChecksumValidation:'WHEN_REQUIRED'})};}
 function partSize(size:number){return Math.max(16*MiB,Math.ceil(size/9999/MiB)*MiB);}
 async function authorized(req:Request){
  const token=req.headers.get('Authorization')?.replace(/^Bearer\s+/i,'');if(!token)fail('Требуется вход',401);
@@ -27,8 +36,8 @@ Deno.serve(async(req:Request)=>{
   if(Number(req.headers.get('Content-Length')||0)>65536)fail('Слишком большой запрос',413);
   const raw=await req.text();if(raw.length>65536)fail('Слишком большой запрос',413);
   const p=JSON.parse(raw),action=p.action;
-  if(action==='hello')return Response.json({user_id:user.id,storage_ready:!!(Deno.env.get('YC_BUCKET')&&Deno.env.get('YC_ACCESS_KEY_ID')&&Deno.env.get('YC_SECRET_ACCESS_KEY'))},{headers});
-  const {s3,bucket}=storage();
+  if(action==='hello')return Response.json({user_id:user.id,storage_ready:!!(await credentials())},{headers});
+  const {s3,bucket}=await storage();
   let book:any;
   if(action==='init'){
    const format=p.format,size=Number(p.size),fingerprint=p.fingerprint;
