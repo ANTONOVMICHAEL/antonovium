@@ -15,10 +15,15 @@ the existing Supabase Free project. Existing project tables are unchanged.
 
 Activation blockers:
 
-- The personal owner email still needs explicit approval before allowlisting.
-- Yandex Cloud login is not complete. No bucket, access key or paid resource
-  has been created. Prices, billing consent, bucket-scoped permissions, CORS,
-  unfinished-upload lifecycle and server secrets must be configured there.
+- The approved owner email is allowlisted in Supabase; it remains unbound until
+  the owner's first authenticated sign-in.
+- A Yandex Cloud billing account is linked to the new cloud. Creating a private
+  standard bucket with a 1 GiB capacity limit returned `Access Denied` on
+  2026-10-18. The signed-in account has inherited cloud-owner rights, so the
+  cause is not established. The billing account's activation status needs
+  verification. No bucket or access key has been created, and no storage usage
+  has been incurred. Bucket-scoped permissions, CORS, unfinished-upload
+  lifecycle and server secrets remain to be configured.
 - Supabase Auth must allow the existing Pages URL as the sign-in redirect;
   new registrations should be disabled after the approved owner is verified.
 - Real PDF/FB2 uploads, expiring URLs, authorized foreign-owner denial and two
