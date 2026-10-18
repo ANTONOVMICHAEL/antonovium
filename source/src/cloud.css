@@ -22,3 +22,32 @@
 @media(max-width:720px){.cloud-library-actions{gap:7px}.cloud-library-actions .button{padding:10px;font-size:10px}.cloud-account{font-size:10px;max-width:70px;white-space:normal}.cloud-selection{max-width:96vw;white-space:normal;gap:10px;bottom:12px}.cloud-selection>span{display:none}.cloud-book-scroll{padding:12px}.fb2-document{padding:20px 16px}.cloud-reader-settings{padding:12px 16px}.cloud-reader>.document-navigation{padding:14px}.cloud-pdf-search{padding:8px 14px}.cloud-book-cover{width:32px}.cloud-reader .context-panel{display:flex}}
 
 .cloud-sync-error{display:flex;align-items:center;justify-content:center;gap:20px;padding:12px 20px;background:var(--wash);color:var(--ink);font-size:12px;border-top:1px solid var(--line)}.cloud-sync-error button{text-decoration:underline;white-space:nowrap}
+
+/* The reader keeps its controls reachable while text is selected on a touch screen. */
+.cloud-reader-toolbar{height:auto;min-height:63px;flex-wrap:wrap;justify-content:flex-start;padding:9px 0;gap:8px 12px}
+.cloud-reader-toolbar .segmented>button,.cloud-reader-toolbar .reader-controls>button{min-height:40px}
+.cloud-reader-toolbar .reader-controls{margin-left:auto;gap:6px;flex-wrap:wrap}
+.cloud-reader-toolbar .reader-controls>.text-button{padding:8px 10px;font-size:11px}
+.cloud-reader-toolbar .reader-controls>.text-button:first-child{font-size:13px}
+.cloud-reader-settings input[type=range]{min-width:120px;accent-color:var(--primary)}
+.cloud-book-scroll.cloud-format-fb2.cloud-layout-pages{overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:thin}
+.fb2-document.paged-text,.fb2-document.wide-text.paged-text{width:100%;max-width:none;height:100%;min-height:0;padding:20px 24px;column-width:var(--page-width);column-gap:48px;column-fill:auto;overflow-wrap:anywhere}
+.fb2-document.paged-text img,.fb2-document.paged-text table{max-height:80%;break-inside:avoid}
+.cloud-pdf-continuous{display:flex;flex-direction:column;align-items:center;gap:24px}
+.cloud-scroll-page-shell{display:flex;align-items:center;flex-direction:column;gap:9px;max-width:100%}
+.cloud-page-number{font-size:11px;color:var(--muted)}
+.cloud-page-error{position:absolute;inset:0;display:grid;place-items:center;padding:20px;color:var(--muted);line-height:1.5}
+.cloud-pdf-highlight{pointer-events:none;z-index:1}
+.cloud-pdf-note-marker{position:absolute;right:-18px;z-index:3;display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--primary);color:white;box-shadow:0 2px 8px #0002;line-height:1;transform:translateY(-30%)}
+.cloud-fb2-highlight{background:color-mix(in srgb,var(--mark) 80%,transparent);color:inherit;border-radius:2px;box-decoration-break:clone;cursor:pointer}
+.cloud-fb2-highlight:focus-visible,.cloud-pdf-note-marker:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.cloud-notes-overlay{position:fixed;inset:0;z-index:35;background:#0007;display:flex;justify-content:flex-end}
+.cloud-notes-drawer{width:min(480px,100%);height:100%;background:var(--paper);display:flex;flex-direction:column;box-shadow:var(--shadow);padding:24px;gap:16px;min-height:0}
+.cloud-notes-header{display:flex;justify-content:space-between;align-items:center;gap:16px;font:23px var(--serif)}
+.cloud-notes-header button{min-width:44px;min-height:44px;font:28px var(--sans)}
+.cloud-notes-body{overflow:auto;flex:1;min-height:0}
+.cloud-notes-drawer>.button{align-self:stretch;min-height:48px}
+.cloud-selection{z-index:32;max-width:calc(100vw - 24px);white-space:normal;flex-wrap:wrap;justify-content:center}
+.cloud-selection>button{min-height:44px}
+@media(max-width:960px){.cloud-reader .reader-workspace.mode-research{grid-template-columns:minmax(0,1fr)}.cloud-reader .context-panel{display:none}.cloud-reader-toolbar .reader-controls{margin-left:0}}
+@media(max-width:720px){.cloud-reader{padding:0 10px}.cloud-reader .reader-heading{min-height:52px;height:auto}.cloud-reader-toolbar{gap:6px;padding:7px 0}.cloud-reader-toolbar .segmented{flex:1;justify-content:center}.cloud-reader-toolbar .segmented>button{flex:1;padding:8px;font-size:11px}.cloud-reader-toolbar .reader-controls{width:100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}.cloud-reader-toolbar .reader-controls>.text-button{padding:5px 3px;font-size:10px;line-height:1.25;white-space:normal}.cloud-reader-toolbar .reader-controls>.text-button:first-child{font-size:11px}.cloud-reader .context-panel{display:none}.cloud-book-scroll.cloud-format-fb2.cloud-layout-pages{padding:0}.fb2-document.paged-text,.fb2-document.wide-text.paged-text{padding:16px;column-width:calc(100vw - 52px);column-gap:32px}.cloud-pdf-note-marker{right:0}.cloud-selection{bottom:max(8px,env(safe-area-inset-bottom));width:calc(100vw - 16px);padding:8px;gap:6px}.cloud-selection .button,.cloud-selection .text-button{flex:1;font-size:11px;min-height:44px;padding:8px}.cloud-selection>button:last-child{flex:0 0 44px}.cloud-notes-drawer{padding:16px 14px max(16px,env(safe-area-inset-bottom))}.cloud-reader>.document-navigation{gap:8px}.cloud-reader>.document-navigation>span{min-width:0;max-width:50%;overflow:hidden;text-overflow:ellipsis}.cloud-reader>.document-navigation button{min-height:44px}}
