@@ -3,7 +3,7 @@ import {createClient,type Session} from '@supabase/supabase-js';
 import {defaultState,newId,STORAGE_KEY} from './storage';
 import type {SavedState} from './types';
 export const supabase=createClient('https://hmdjcxpogdrveddznedx.supabase.co','sb_publishable_6mDpQ-hKERSZngTl8Ki5LQ_JkHGbOd4',{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit',storageKey:'antonovium.auth'}});
-export interface Book {id:string;title:string;author:string;edition:string;format:'pdf'|'fb2';original_name:string;size_bytes:number;status:'uploading'|'ready'|'deleting'|'failed';created_at:string;fingerprint:string;cover?:string}
+export interface Book {id:string;title:string;author:string;edition:string;format:'pdf'|'fb2';original_name:string;size_bytes:number;status:'uploading'|'ready'|'deleting'|'failed';created_at:string;fingerprint:string;cover?:string;local?:boolean}
 export interface FileAnchor {format:'pdf'|'fb2';page?:number;chapter?:string;paragraph?:string;offset?:number;endParagraph?:string;endOffset?:number;quote?:string;prefix?:string;rects?:number[][];fraction?:number}
 export interface Entity {kind:string;entity_id:string;revision:number;data:any;updated_at:string}
 type Cloud={session:Session|null;loading:boolean;authorized:boolean;hydrated:boolean;setHydrated:(v:boolean)=>void;books:Book[];storageReady:boolean;error:string;status:string;setStatus:(s:string)=>void;setError:(s:string)=>void;refresh:()=>Promise<void>;records:Entity[];setRecords:(e:Entity[])=>void;loginOpen:boolean;setLoginOpen:(v:boolean)=>void};

@@ -1,0 +1,19 @@
+import {useEffect,useState} from 'react';
+import type {Book,Entity,FileAnchor} from './cloud';
+import {newId} from './storage';
+
+export type LocalBook=Book&{local:true};
+const DATABASE='antonovium.local.books',EVENT='antonovium-local-books';
+function database():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{const request=indexedDB.open(DATABASE,1);request.onupgradeneeded=()=>{const db=request.result;db.createObjectStore('books',{keyPath:'id'});db.createObjectStore('files')};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});}
+function transaction<T>(store:'books'|'files',mode:IDBTransactionMode,action:(s:IDBObjectStore,done:(v:T)=>void)=>void):Promise<T>{return database().then(db=>new Promise<T>((resolve,reject)=>{const tx=db.transaction(store,mode);let value:T;tx.oncomplete=()=>{db.close();resolve(value)};tx.onerror=()=>{db.close();reject(tx.error)};tx.onabort=()=>{db.close();reject(tx.error)};action(tx.objectStore(store),v=>{value=v})}));}
+export async function listLocalBooks():Promise<LocalBook[]>{return transaction('books','readonly',(s,done)=>{const r=s.getAll();r.onsuccess=()=>done(r.result as LocalBook[])});}
+export async function readLocalFile(id:string):Promise<Blob>{const file=await transaction<Blob|undefined>('files','readonly',(s,done)=>{const r=s.get(id);r.onsuccess=()=>done(r.result)});if(!file)throw Error('Оригинал книги не найден на этом устройстве');return file;}
+export async function addLocalBook(file:File,details:Pick<Book,'title'|'author'|'edition'|'cover'|'fingerprint'>):Promise<LocalBook>{
+ const book:LocalBook={...details,id:newId(),local:true,format:/\.pdf$/i.test(file.name)?'pdf':'fb2',original_name:file.name,size_bytes:file.size,status:'ready',created_at:new Date().toISOString()};
+ const db=await database();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction(['books','files'],'readwrite');tx.objectStore('files').put(file,book.id);tx.objectStore('books').put(book);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});}finally{db.close()}window.dispatchEvent(new Event(EVENT));return book;
+}
+export async function deleteLocalBook(id:string){const db=await database();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction(['books','files'],'readwrite');tx.objectStore('files').delete(id);tx.objectStore('books').delete(id);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});}finally{db.close()}localStorage.removeItem(`antonovium.reading.local.${id}`);localStorage.removeItem(`antonovium.layout.local.${id}`);localStorage.removeItem(`antonovium.bookmarks.local.${id}`);window.dispatchEvent(new Event(EVENT));}
+export function useLocalBooks(){const[books,setBooks]=useState<LocalBook[]>([]),[error,setError]=useState('');useEffect(()=>{let active=true;const refresh=()=>void listLocalBooks().then(rows=>{if(active){setBooks(rows);setError('')}}).catch(()=>{if(active)setError('Не удалось открыть книги на этом устройстве')});refresh();window.addEventListener(EVENT,refresh);return()=>{active=false;window.removeEventListener(EVENT,refresh)}},[]);return {books,error};}
+export function localProgress(id:string):FileAnchor|undefined{try{return JSON.parse(localStorage.getItem(`antonovium.reading.local.${id}`)??'null')?.anchor}catch{return undefined}}
+export function localBookmarks(id:string):Entity[]{try{return JSON.parse(localStorage.getItem(`antonovium.bookmarks.local.${id}`)??'[]')}catch{return []}}
+export function saveLocalBookmark(id:string,at:FileAnchor,title:string):Entity{const row:Entity={kind:'bookmark',entity_id:newId(),revision:1,data:{bookId:id,title,anchor:at,created_at:new Date().toISOString()},updated_at:new Date().toISOString()};localStorage.setItem(`antonovium.bookmarks.local.${id}`,JSON.stringify([...localBookmarks(id),row]));return row;}

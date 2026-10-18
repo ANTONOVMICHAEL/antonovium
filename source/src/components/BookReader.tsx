@@ -4,6 +4,7 @@ import {useApp} from '../context';
 import {decodeXML,parseFB2,type FB2Document} from '../fb2';
 import {paintFB2Highlights} from '../fb2Highlights';
 import {newId} from '../storage';
+import {readLocalFile,localBookmarks,saveLocalBookmark,localProgress} from '../localBooks';
 import type {PDFDocumentProxy} from '../pdf';
 import type {Note} from '../types';
 import NoteList from './NoteList';
@@ -12,17 +13,18 @@ export default function BookReader({book}:{book:Book}){
  const c=useCloud(),{state,update,composeNote,toast,focusParagraph,setFocusParagraph,setSelectedNoteId}=useApp();
  const[anchor,setAnchor]=useState<FileAnchor>({format:book.format,page:1}),[pdf,setPDF]=useState<PDFDocumentProxy|null>(null),[fb2,setFB2]=useState<FB2Document|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[reload,setReload]=useState(0),[zoom,setZoom]=useState(1),[contents,setContents]=useState(false),[settings,setSettings]=useState(false),[selected,setSelected]=useState<{quote:string;anchor:FileAnchor}|null>(null),[search,setSearch]=useState(''),[results,setResults]=useState<{page:number;text:string}[]>([]),[searching,setSearching]=useState(false),[hasText,setHasText]=useState(true),[visiblePage,setVisiblePage]=useState(1);
  const scroll=useRef<HTMLDivElement>(null),documentRef=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),textLayer=useRef<HTMLDivElement>(null),revision=useRef(0),touched=useRef(false),current=useRef(anchor),saveTimer=useRef<ReturnType<typeof setTimeout>|null>(null),restoring=useRef(false),latestRecords=useRef(c.records),selectionTimer=useRef<ReturnType<typeof setTimeout>|null>(null),touchStart=useRef<{x:number;y:number}|null>(null);latestRecords.current=c.records;
- const notes=useMemo(()=>state.notes.filter(n=>n.sourceId===book.id),[state.notes,book.id]),bookmarks=c.records.filter(r=>r.kind==='bookmark'&&r.data.bookId===book.id&&!r.data.deleted);
- const cacheKey=`antonovium.reading.${c.session!.user.id}.${book.id}`;const saving=useRef(false),pendingProgress=useRef<FileAnchor|null>(null);
- const layoutKey=`antonovium.layout.${c.session!.user.id}.${book.id}`;
+ const notes=useMemo(()=>state.notes.filter(n=>n.sourceId===book.id),[state.notes,book.id]),[deviceBookmarks,setDeviceBookmarks]=useState(()=>book.local?localBookmarks(book.id):[]),bookmarks=book.local?deviceBookmarks:c.records.filter(r=>r.kind==='bookmark'&&r.data.bookId===book.id&&!r.data.deleted);
+ const owner=book.local?'local':c.session?.user.id??'guest';const cacheKey=`antonovium.reading.${owner}.${book.id}`;const saving=useRef(false),pendingProgress=useRef<FileAnchor|null>(null);
+ const layoutKey=`antonovium.layout.${owner}.${book.id}`;
  const[layout,setLayout]=useState<'scroll'|'pages'>(()=>localStorage.getItem(layoutKey)==='pages'?'pages':'scroll'),[notesOpen,setNotesOpen]=useState(false),[pageWidth,setPageWidth]=useState(680),[fb2Page,setFb2Page]=useState(1),[fb2Pages,setFb2Pages]=useState(1);
  useEffect(()=>{if(!scroll.current)return;const observer=new ResizeObserver(()=>setPageWidth(Math.max(240,Math.min(1000,scroll.current!.clientWidth-48))));observer.observe(scroll.current);return()=>observer.disconnect()},[]);
  function changeLayout(value:'scroll'|'pages'){if(value===layout)return;localStorage.setItem(layoutKey,value);restoring.current=true;setLayout(value);setSelected(null)}
  function openAnnotation(note:Note){setSelectedNoteId(note.id);setNotesOpen(true)}
- useEffect(()=>{const row=c.records.find(r=>r.kind==='progress'&&r.entity_id===book.id);if(!touched.current&&row){revision.current=row.revision;current.current=row.data.anchor;setAnchor(row.data.anchor)}},[c.records,book.id]);
- useEffect(()=>{try{const pending=JSON.parse(localStorage.getItem(cacheKey)??'null');if(pending?.unsent){revision.current=pending.revision;touched.current=true;current.current=pending.anchor;setAnchor(pending.anchor);void persist(pending.anchor)}}catch{}},[book.id]);
- async function bookmark(at:FileAnchor,title?:string){const id=newId();const row=await saveRecord('bookmark',id,{bookId:book.id,title:title??(at.format==='pdf'?`Страница PDF ${at.page}`:'Закладка в книге'),anchor:at,created_at:new Date().toISOString()},0);c.setRecords([...latestRecords.current.filter(r=>!(r.kind==='bookmark'&&r.entity_id===id)),row]);toast('Закладка сохранена в облаке')}
+ useEffect(()=>{if(book.local){const at=localProgress(book.id);if(at&&!touched.current){current.current=at;setAnchor(at)}return}const row=c.records.find(r=>r.kind==='progress'&&r.entity_id===book.id);if(!touched.current&&row){revision.current=row.revision;current.current=row.data.anchor;setAnchor(row.data.anchor)}},[c.records,book.id]);
+ useEffect(()=>{try{const pending=JSON.parse(localStorage.getItem(cacheKey)??'null');if(pending?.anchor&&(book.local||pending.unsent)){revision.current=pending.revision??0;touched.current=true;current.current=pending.anchor;setAnchor(pending.anchor);if(!book.local)void persist(pending.anchor)}}catch{}},[book.id]);
+ async function bookmark(at:FileAnchor,title?:string){const label=title??(at.format==='pdf'?`Страница PDF ${at.page}`:'Закладка в книге');if(book.local){const row=saveLocalBookmark(book.id,at,label);setDeviceBookmarks(v=>[...v,row]);toast('Закладка сохранена на устройстве');return}const id=newId();const row=await saveRecord('bookmark',id,{bookId:book.id,title:label,anchor:at,created_at:new Date().toISOString()},0);c.setRecords([...latestRecords.current.filter(r=>!(r.kind==='bookmark'&&r.entity_id===id)),row]);toast('Закладка сохранена в облаке')}
  async function saveOne(at:FileAnchor){
+  if(book.local){localStorage.setItem(cacheKey,JSON.stringify({anchor:at,unsent:false}));return}
   localStorage.setItem(cacheKey,JSON.stringify({anchor:at,revision:revision.current,unsent:true}));
   try{
    let row:Entity;
@@ -35,19 +37,19 @@ export default function BookReader({book}:{book:Book}){
   }catch(e){setError(`Позиция пока сохранена только на этом устройстве: ${(e as Error).message}`)}
  }
  async function persist(at:FileAnchor){pendingProgress.current=at;if(saving.current)return;saving.current=true;try{while(pendingProgress.current){const next=pendingProgress.current;pendingProgress.current=null;await saveOne(next)}}finally{saving.current=false}}
- function remember(at:FileAnchor){current.current=at;touched.current=true;localStorage.setItem(cacheKey,JSON.stringify({anchor:at,revision:revision.current,unsent:true}));if(saveTimer.current)clearTimeout(saveTimer.current);saveTimer.current=setTimeout(()=>void persist(at),600)}
+ function remember(at:FileAnchor){current.current=at;touched.current=true;localStorage.setItem(cacheKey,JSON.stringify({anchor:at,revision:revision.current,unsent:!book.local}));if(book.local)return;if(saveTimer.current)clearTimeout(saveTimer.current);saveTimer.current=setTimeout(()=>void persist(at),600)}
  function move(at:FileAnchor){remember(at);setAnchor(at);setSelected(null);if(book.format==='pdf'&&layout==='scroll'&&scroll.current){restoring.current=true;requestAnimationFrame(()=>{const page=scroll.current?.querySelector<HTMLElement>(`[data-page="${at.page??1}"]`);if(page&&scroll.current)scroll.current.scrollTop+=page.getBoundingClientRect().top-scroll.current.getBoundingClientRect().top+(at.fraction??0)*page.clientHeight;requestAnimationFrame(()=>restoring.current=false)})}}
  useEffect(()=>()=>{if(saveTimer.current){clearTimeout(saveTimer.current);void persist(current.current)}if(selectionTimer.current)clearTimeout(selectionTimer.current)},[]);
  useEffect(()=>{if(!focusParagraph?.startsWith('file:'))return;try{move(JSON.parse(focusParagraph.slice(5)))}catch{}setFocusParagraph(null)},[focusParagraph]);
- useEffect(()=>{if(!c.hydrated)return;let stopped=false,task:{destroy:()=>Promise<void>}|undefined;const controller=new AbortController();setLoading(true);setError('');
-  (async()=>{try{const signed=await fileApi('read',{id:book.id});if(stopped)return;
-   if(book.format==='pdf'){const{openPDF}=await import('../pdf');const pending=openPDF(signed.url);task=pending;const document=await pending.promise;if(stopped){await pending.destroy();return}setPDF(document);setAnchor(v=>{const next={...v,page:Math.min(document.numPages,Math.max(1,v.page??1))};current.current=next;return next});}
-   else{const response=await fetch(signed.url,{signal:controller.signal,cache:'no-store'});if(!response.ok)throw Error('Не удалось получить оригинал FB2');const length=Number(response.headers.get('Content-Length')??0);if(length>64*1048576)throw Error('FB2 превышает безопасный объем обработки: 64 МБ XML');const parsed=parseFB2(decodeXML(new Uint8Array(await response.arrayBuffer())));if(stopped)return;setFB2(parsed);setAnchor(v=>{const next={...v,chapter:parsed.chapters.some(ch=>ch.id===v.chapter)?v.chapter:parsed.chapters[0].id};current.current=next;return next});}
+ useEffect(()=>{if(!book.local&&!c.hydrated)return;let stopped=false,task:{destroy:()=>Promise<void>}|undefined;const controller=new AbortController();setLoading(true);setError('');
+  (async()=>{try{const signed=book.local?null:await fileApi('read',{id:book.id});if(stopped)return;
+   if(book.format==='pdf'){const{openPDF}=await import('../pdf');const pending=book.local?openPDF(new Uint8Array(await(await readLocalFile(book.id)).arrayBuffer())):openPDF(signed!.url);task=pending;const document=await pending.promise;if(stopped){await pending.destroy();return}setPDF(document);setAnchor(v=>{const next={...v,page:Math.min(document.numPages,Math.max(1,v.page??1))};current.current=next;return next});}
+   else{let bytes:Uint8Array;if(book.local){const file=await readLocalFile(book.id);if(file.size>64*1048576)throw Error('FB2 превышает безопасный объем обработки: 64 МБ XML');bytes=new Uint8Array(await file.arrayBuffer())}else{const response=await fetch(signed!.url,{signal:controller.signal,cache:'no-store'});if(!response.ok)throw Error('Не удалось получить оригинал FB2');const length=Number(response.headers.get('Content-Length')??0);if(length>64*1048576)throw Error('FB2 превышает безопасный объем обработки: 64 МБ XML');bytes=new Uint8Array(await response.arrayBuffer())}const parsed=parseFB2(decodeXML(bytes));if(stopped)return;setFB2(parsed);setAnchor(v=>{const next={...v,chapter:parsed.chapters.some(ch=>ch.id===v.chapter)?v.chapter:parsed.chapters[0].id};current.current=next;return next});}
    if(!stopped)setLoading(false);
   }catch(e){if(!stopped){setError((e as Error).message);setLoading(false)}}})();
-  const refresh=book.format==='pdf'?setTimeout(()=>setReload(v=>v+1),14*60*1000):undefined;
+  const refresh=!book.local&&book.format==='pdf'?setTimeout(()=>setReload(v=>v+1),14*60*1000):undefined;
   return()=>{stopped=true;controller.abort();if(refresh)clearTimeout(refresh);void task?.destroy();setPDF(null);setFB2(null)};
- },[book.id,reload,c.hydrated]);
+ },[book.id,reload,c.hydrated,book.local]);
  useEffect(()=>{if(layout!=='pages'||!pdf||!canvas.current||!textLayer.current||!scroll.current)return;let stopped=false;let render:{cancel:()=>void}|undefined,layer:{cancel:()=>void}|undefined;setError('');restoring.current=true;
   (async()=>{try{const pageNumber=Math.min(pdf.numPages,Math.max(1,anchor.page??1)),page=await pdf.getPage(pageNumber);if(stopped)return;setVisiblePage(pageNumber);const initial=page.getViewport({scale:1}),width=Math.max(240,Math.min(1000,scroll.current!.clientWidth-48)),viewport=page.getViewport({scale:width/initial.width*zoom}),ratio=Math.min(2,devicePixelRatio||1),cv=canvas.current!,tl=textLayer.current!;
    cv.width=Math.floor(viewport.width*ratio);cv.height=Math.floor(viewport.height*ratio);cv.style.width=`${viewport.width}px`;cv.style.height=`${viewport.height}px`;tl.innerHTML='';tl.style.width=`${viewport.width}px`;tl.style.height=`${viewport.height}px`;tl.style.setProperty('--total-scale-factor',String(viewport.scale));
@@ -100,7 +102,7 @@ export default function BookReader({book}:{book:Book}){
  }
  function scheduleCapture(){if(selectionTimer.current)clearTimeout(selectionTimer.current);selectionTimer.current=setTimeout(capture,120)}
  function highlight(){if(!selected)return;const at=selected.anchor,id=newId(),quote=selected.quote;const value:Note={id,sourceId:book.id,sectionId:book.format==='pdf'?`pdf:${at.page}`:at.chapter??'',quote,anchors:[],fileAnchor:at,sourceTitle:book.title,locator:book.format==='pdf'?`Страница PDF ${at.page}`:`Глава: ${chapter?.title??''}`,title:quote.slice(0,80)+(quote.length>80?'…':''),body:'',kind:'thought',categories:[],createdAt:new Date().toISOString(),evidenceType:'highlight',demo:false};
-  update(s=>({...s,notes:[value,...s.notes]}));setSelected(null);window.getSelection()?.removeAllRanges();toast('Выделение сохранено в облаке');}
+  update(s=>({...s,notes:[value,...s.notes]}));setSelected(null);window.getSelection()?.removeAllRanges();toast(book.local?'Выделение сохранено на устройстве':'Выделение сохранено в облаке');}
  function note(){const at=selected?.anchor??current.current;composeNote({sourceId:book.id,sectionId:book.format==='pdf'?`pdf:${at.page}`:at.chapter??'',quote:selected?.quote??'',anchors:[],locator:book.format==='pdf'?`Страница PDF ${at.page}`:`Глава: ${chapter?.title??''}`,fileAnchor:at,sourceTitle:book.title});setSelected(null)}
  function fb2Turn(direction:number){const frame=scroll.current;if(!frame||!fb2)return;const next=frame.scrollLeft+direction*frame.clientWidth,max=frame.scrollWidth-frame.clientWidth;
   if(next<0||next>max+frame.clientWidth*.25){const index=fb2.chapters.findIndex(ch=>ch.id===chapter?.id),other=fb2.chapters[index+direction];if(other)move({format:'fb2',chapter:other.id});return}
