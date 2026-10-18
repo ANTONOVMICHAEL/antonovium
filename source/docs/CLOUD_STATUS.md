@@ -22,10 +22,14 @@ Activation blockers:
   with a 1 GiB capacity limit and authorized-only access. Its CORS rule allows
   the GitHub Pages origin `https://antonovmichael.github.io` for GET, HEAD,
   and PUT; incomplete multipart uploads are aborted after 7 days. The bucket
-  is empty (0 objects, 0 B). A dedicated service account, bucket-scoped
-  `storage.editor` grant, static access key, and Supabase Edge secrets
-  `YC_BUCKET`, `YC_ACCESS_KEY_ID`, `YC_SECRET_ACCESS_KEY` remain to be
-  created.
+  is empty (0 objects, 0 B). Dedicated service account
+  `antonovium-storage` (ID `ajeogf1vmhhg7bemj2tb`) has been created
+  without a folder role or access keys. Assigning `storage.editor` on this
+  bucket remains blocked by a Yandex Console TypeError in its role dialog;
+  Cloud Shell session connection also fails (2026-10-18). Do not broaden
+  access to the folder as a workaround. After a bucket-scoped role is assigned,
+  create a static access key and store `YC_BUCKET`, `YC_ACCESS_KEY_ID`,
+  `YC_SECRET_ACCESS_KEY` in Supabase Edge secrets. Never commit the key.
 - Supabase Auth must allow the existing Pages URL as the sign-in redirect;
   new registrations should be disabled after the approved owner is verified.
 - Real PDF/FB2 uploads, expiring URLs, authorized foreign-owner denial and two
