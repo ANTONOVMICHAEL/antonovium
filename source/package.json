@@ -11,6 +11,7 @@
     "preview": "vite preview --host 0.0.0.0",
     "test:cloud": "node scripts/test-cloud.mjs",
     "test:pdf": "node scripts/test-pdf.mjs",
+    "test:sync": "node scripts/test-sync.mjs",
     "check:edge": "node scripts/check-edge.mjs"
   },
   "dependencies": {

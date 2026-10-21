@@ -1,6 +1,9 @@
 import {createContext,useContext,useEffect,useRef,useState,type ReactNode} from 'react';
 import {createClient,type Session} from '@supabase/supabase-js';
-import {defaultState,newId,STORAGE_KEY} from './storage';
+import {decodeState,newId,STORAGE_KEY} from './storage';
+import {mergeMigration} from './migration';
+import {flatten,applyRecords,equal,syncKey,managed,localValue,unchanged,firstContact} from './sync';
+export {flatten,applyRecords,canonical} from './sync';
 import type {SavedState} from './types';
 export const supabase=createClient('https://hmdjcxpogdrveddznedx.supabase.co','sb_publishable_6mDpQ-hKERSZngTl8Ki5LQ_JkHGbOd4',{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit',storageKey:'antonovium.auth'}});
 export interface Book {id:string;title:string;author:string;edition:string;format:'pdf'|'fb2';original_name:string;size_bytes:number;status:'uploading'|'ready'|'deleting'|'failed';created_at:string;fingerprint:string;cover?:string;local?:boolean}
@@ -18,56 +21,61 @@ export function CloudProvider({children}:{children:ReactNode}){
  const[session,setSession]=useState<Session|null>(null),[loading,setLoading]=useState(true),[hydrated,setHydrated]=useState(false),[authorized,setAuthorized]=useState(false),[verifiedUser,setVerifiedUser]=useState(''),[books,setBooks]=useState<Book[]>([]),[storageReady,setStorageReady]=useState(false),[error,setError]=useState(''),[status,setStatus]=useState(''),[records,setRecords]=useState<Entity[]>([]),[loginOpen,setLoginOpen]=useState(false);
  const generation=useRef(0);
  async function refresh(){const ticket=generation.current;const {data,error}=await supabase.from('av_books').select('id,title,author,edition,format,original_name,size_bytes,status,created_at,fingerprint,cover').order('created_at',{ascending:false});if(error)throw Error('Не удалось обновить каталог');if(generation.current===ticket)setBooks(data??[]);}
- useEffect(()=>{supabase.auth.getSession().then(({data})=>{setSession(data.session);setLoading(false)});const{data:{subscription}}=supabase.auth.onAuthStateChange((_event,s)=>{setSession(s);setLoading(false)});return()=>subscription.unsubscribe()},[]);
+ useEffect(()=>{supabase.auth.getSession().then(({data})=>{setSession(data.session);setLoading(false)}).catch(()=>{setLoading(false);setError('Не удалось восстановить вход. Проверь соединение.')});const{data:{subscription}}=supabase.auth.onAuthStateChange((_event,s)=>{setSession(s);setLoading(false)});return()=>subscription.unsubscribe()},[]);
  useEffect(()=>{const ticket=++generation.current;setBooks([]);setRecords([]);setHydrated(false);setAuthorized(false);setStorageReady(false);setError('');setStatus('');if(!session)return;
-  fileApi('hello').then(async h=>{if(generation.current!==ticket)return;setVerifiedUser(session.user.id);setAuthorized(true);setStorageReady(h.storage_ready);await refresh()}).catch(e=>{if(generation.current===ticket)setError(e.message)});
+  const verify=()=>{void fileApi('hello').then(async h=>{if(generation.current!==ticket)return;setVerifiedUser(session.user.id);setAuthorized(true);setStorageReady(h.storage_ready);setError('');await refresh()}).catch(e=>{if(generation.current===ticket)setError(e.message)})};
+  verify();window.addEventListener('online',verify);return()=>{++generation.current;window.removeEventListener('online',verify)};
  },[session?.user.id]);
  const visible=!!session&&authorized&&verifiedUser===session.user.id;
  return <CloudContext.Provider value={{session,loading,authorized:visible,hydrated:visible&&hydrated,setHydrated,books:visible?books:[],storageReady:visible&&storageReady,error,status,setStatus,setError,refresh,records:visible?records:[],setRecords,loginOpen,setLoginOpen}}>{children}</CloudContext.Provider>;
 }
-export function flatten(s:SavedState):Record<string,any>{
- const entries:Record<string,any>={};for(const [kind,items] of [['source',s.sources],['note',s.notes],['research',s.research]] as const)for(const item of items)if(!item.demo)entries[`${kind}:${item.id}`]=item;
- entries['settings:reader']={theme:s.theme,fontSize:s.fontSize,lineHeight:s.lineHeight,wide:s.wide,readerFont:s.readerFont??'serif',wilkinsActivity:s.wilkinsActivity};entries['manuscript:main']={title:s.manuscriptTitle,body:s.manuscript};return entries;
-}
-export function canonical(value:any):string{if(Array.isArray(value))return '['+value.map(canonical).join(',')+']';if(value&&typeof value==='object')return '{'+Object.keys(value).filter(k=>value[k]!==undefined).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}';return JSON.stringify(value);}
-const equal=(a:unknown,b:unknown)=>canonical(a)===canonical(b);
-export function applyRecords(state:SavedState,rows:Entity[]):SavedState{
- const next={...state};for(const[kind,field]of [['source','sources'],['note','notes'],['research','research']]as const){const map=new Map<string,any>((next[field] as any[]).map(v=>[v.id,v]));for(const r of rows.filter(r=>r.kind===kind)){if(r.data.deleted)map.delete(r.entity_id);else map.set(r.entity_id,r.data)}(next as any)[field]=[...map.values()];}
- for(const r of rows){if(r.kind==='settings')Object.assign(next,r.data);if(r.kind==='manuscript'){next.manuscriptTitle=r.data.title;next.manuscript=r.data.body;}}return next;
-}
 export function useCloudSync(state:SavedState,update:(v:Partial<SavedState>|((s:SavedState)=>SavedState))=>void){
- const cloud=useCloud(),latest=useRef(state),busy=useRef(false),ready=useRef(false),cache=useRef<Record<string,Entity>>({}),mounted=useRef(true);latest.current=state;
- const cacheKey=`antonovium.sync.${cloud.session?.user.id??'guest'}`;
- function persist(){localStorage.setItem(cacheKey,JSON.stringify(cache.current));}
- async function save(kind:string,id:string,data:any,expected?:number){const prior=cache.current[`${kind}:${id}`];const{data:result,error}=await supabase.rpc('av_save_entity',{p_kind:kind,p_id:id,p_expected:expected??prior?.revision??0,p_data:data});if(error)throw Error(error.message);return result as {ok:boolean;conflict?:boolean;row:Entity|null};}
- async function pull(){const all:Entity[]=[];for(let offset=0;;offset+=500){const{data,error}=await supabase.from('av_entities').select('*').order('kind').order('entity_id').range(offset,offset+499);if(error)throw Error('Не удалось получить облачные записи');all.push(...data??[]);if((data?.length??0)<500)break;}return all;}
- async function run(){if(!ready.current||busy.current||!mounted.current)return;busy.current=true;let success=false,noteConflict=false;try{
-  cloud.setStatus('Синхронизация…');const local=flatten(latest.current);
-  for(const[key,data]of Object.entries(local)){if(equal(cache.current[key]?.data,data))continue;const colon=key.indexOf(':'),kind=key.slice(0,colon),id=key.slice(colon+1),result=await save(kind,id,data);
-   if(!mounted.current)return;
-   if(!result.ok){
-    if(kind==='note'){
-     noteConflict=true;const copy={...data,id:newId(),title:`${data.title} (версия с этого устройства)`};const saved=await save('note',copy.id,copy,0);if(!saved.ok||!saved.row)throw Error('Не удалось сохранить конфликт заметки');cache.current[`note:${copy.id}`]=saved.row;update(s=>applyRecords(s,[...result.row?[result.row]:[],saved.row!]));
-    }else{
-     const conflict={original_kind:kind,original_id:id,local:data,remote:result.row?.data,remote_revision:result.row?.revision??0,resolved:false,created_at:new Date().toISOString()};const saved=await save('conflict',newId(),conflict,0);if(!saved.ok||!saved.row)throw Error('Не удалось сохранить конфликт');cache.current[`conflict:${saved.row.entity_id}`]=saved.row;if(result.row)update(s=>applyRecords(s,[result.row!]));cloud.setRecords(Object.values(cache.current));
-    }
-    cloud.setError('Обнаружены изменения с другого устройства. Обе версии сохранены; проверь конфликты.');
+ const cloud=useCloud(),latest=useRef(state),ready=useRef(false),generation=useRef(0),cache=useRef<Record<string,Entity>>({}),pending=useRef(false);latest.current=state;
+ const cacheKey=`antonovium.sync.${cloud.session?.user.id??'guest'}`,runner=useRef<()=>Promise<void>>(async()=>{});
+ function change(fn:(s:SavedState)=>SavedState){latest.current=fn(latest.current);update(fn)}
+ function persist(){localStorage.setItem(cacheKey,JSON.stringify(cache.current))}
+ async function pull(){const all:Entity[]=[];for(let offset=0;;offset+=500){const{data,error}=await supabase.from('av_entities').select('*').order('kind').order('entity_id').range(offset,offset+499);if(error)throw Error('Не удалось получить общие записи. Изменения сохранены на устройстве.');all.push(...data??[]);if((data?.length??0)<500)break}return all}
+ async function save(kind:string,id:string,data:any,expected=cache.current[`${kind}:${id}`]?.revision??0){const{data:r,error}=await supabase.rpc('av_save_entity',{p_kind:kind,p_id:id,p_expected:expected,p_data:data});if(error)throw Error(error.message);return r as {ok:boolean;row:Entity|null}}
+ async function conflict(kind:string,id:string,data:any,remote:Entity|null){
+  if(kind==='note'&&!data.deleted){const copy={...data,id:newId(),title:`${data.title} (версия с другого устройства)`};const r=await save('note',copy.id,copy,0);if(!r.ok||!r.row)throw Error('Не удалось сохранить вторую версию заметки');cache.current[syncKey(r.row)]=r.row;change(s=>applyRecords(s,[r.row!]));}
+  else{const conflictId=newId(),r=await save('conflict',conflictId,{original_kind:kind,original_id:id,local:data,remote:remote?.data,remote_revision:remote?.revision??0,resolved:false,created_at:new Date().toISOString()},0);if(!r.ok||!r.row)throw Error('Не удалось сохранить обе версии');cache.current[syncKey(r.row)]=r.row;}
+ }
+ async function run(){if(!ready.current||pending.current)return;pending.current=true;const ticket=generation.current,active=()=>generation.current===ticket;let successful=false;try{
+  cloud.setStatus('Синхронизация…');
+  // Read remote revisions before writing, so an idle device never overwrites new work.
+  const remote=await pull();if(!active())return;
+  for(const row of remote){const key=syncKey(row),prior=cache.current[key],local=flatten(latest.current);
+   if(!managed(row)){cache.current[key]=row;continue}
+   const value=localValue(local,key,prior);
+   if(unchanged(local,key,prior)||equal(value,row.data)||!prior&&firstContact(local,key)){
+    cache.current[key]=row;
+    if(!equal(value,row.data)&&!(row.data.deleted&&!(key in local)))change(s=>{const now=flatten(s);return unchanged(now,key,prior)||equal(localValue(now,key,prior),row.data)||!prior&&firstContact(now,key)?applyRecords(s,[row]):s});
+   }else if(!prior||row.revision!==prior.revision){
+    await conflict(row.kind,row.entity_id,value,row);if(!active())return;cache.current[key]=row;
+    change(s=>equal(localValue(flatten(s),key,prior),value)?applyRecords(s,[row]):s);
    }
-   if(result.row)cache.current[key]=result.row;
   }
-  const remote=await pull(),snapshot=flatten(latest.current),apply:Entity[]=[];
-  for(const row of remote){const key=`${row.kind}:${row.entity_id}`,prior=cache.current[key];if(!prior||equal(snapshot[key],prior.data)||equal(snapshot[key],row.data)){cache.current[key]=row;apply.push(row);}}
-  if(!mounted.current)return;if(apply.length)update(s=>applyRecords(s,apply));cloud.setRecords(Object.values(cache.current));persist();const unresolved=Object.values(cache.current).some(r=>r.kind==='conflict'&&!r.data.resolved);cloud.setError(unresolved?'Есть конфликт версий. Открой аккаунт, чтобы выбрать сохраненную версию.':noteConflict?'Сохранены две версии заметки. Обе доступны на полях.':'');cloud.setStatus(unresolved?'Есть конфликт версий':'Сохранено в облаке');success=true;
- }catch(e){cloud.setStatus('Есть неотправленные изменения');cloud.setError((e as Error).message)}finally{busy.current=false;if(success&&Object.entries(flatten(latest.current)).some(([k,v])=>!equal(cache.current[k]?.data,v)))setTimeout(()=>void run(),150);}}
- useEffect(()=>{mounted.current=true;ready.current=false;if(!cloud.authorized)return;
-  try{cache.current=JSON.parse(localStorage.getItem(cacheKey)??'{}')}catch{cache.current={};}
-  (async()=>{try{const rows=await pull();if(!mounted.current)return;const local=flatten(latest.current),apply:Entity[]=[];
-   for(const row of rows){const key=`${row.kind}:${row.entity_id}`,prior=cache.current[key];if(!prior||equal(local[key],prior.data)||equal(local[key],row.data)){if(!prior&&local[key]&&!equal(local[key],row.data)&&!equal(local[key],flatten(defaultState)[key]))continue;cache.current[key]=row;apply.push(row);}}
-   update(s=>applyRecords(s,apply));cloud.setRecords(rows);persist();ready.current=true;cloud.setHydrated(true);setTimeout(()=>void run(),100);
-  }catch(e){cloud.setError((e as Error).message)}})();
-  const interval=setInterval(()=>{void run();void cloud.refresh().catch(e=>cloud.setError(e.message))},20000);const online=()=>void run();window.addEventListener('online',online);return()=>{mounted.current=false;ready.current=false;clearInterval(interval);window.removeEventListener('online',online)};
+  // React may batch updates; yield once before taking the outgoing snapshot.
+  await new Promise<void>(resolve=>setTimeout(resolve,0));if(!active())return;
+  const local=flatten(latest.current),keys=new Set([...Object.keys(local),...Object.keys(cache.current).filter(k=>managed(cache.current[k]))]);
+  for(const key of keys){const prior=cache.current[key];if(unchanged(local,key,prior))continue;const value=localValue(local,key,prior);if(value===undefined)continue;const colon=key.indexOf(':'),kind=key.slice(0,colon),id=key.slice(colon+1),r=await save(kind,id,value);if(!active())return;
+   if(!r.ok){await conflict(kind,id,value,r.row);if(r.row)change(s=>equal(localValue(flatten(s),key,prior),value)?applyRecords(s,[r.row!]):s)}if(r.row)cache.current[key]=r.row;
+  }
+  if(!active())return;cloud.setRecords(Object.values(cache.current));persist();const unresolved=Object.values(cache.current).some(r=>r.kind==='conflict'&&!r.data.resolved);cloud.setError(unresolved?'Сохранены обе версии правок. Выбери нужную в личном аккаунте.':'');cloud.setStatus(unresolved?'Есть две версии правок':'Все изменения сохранены');successful=true;
+ }catch(e){if(active()){cloud.setStatus('Есть неотправленные изменения');cloud.setError((e as Error).message)}}finally{if(active()){pending.current=false;if(successful&&Object.entries(flatten(latest.current)).some(([k,v])=>!equal(cache.current[k]?.data,v)))setTimeout(()=>void runner.current(),150)}}}
+ runner.current=run;
+ useEffect(()=>{const ticket=++generation.current;ready.current=false;pending.current=false;cache.current={};if(!cloud.authorized)return;
+  try{cache.current=JSON.parse(localStorage.getItem(cacheKey)??'{}')}catch{}
+  // Import the original device workspace automatically, once per account and browser.
+  const marker=`antonovium.migrated.${cloud.session!.user.id}`;
+  if(!localStorage.getItem(marker)){try{const old=guestBackup();if(old)change(s=>mergeMigration(s,decodeState(old)));localStorage.setItem(marker,'1')}catch{cloud.setError('Локальные записи сохранены. Для переноса открой личный аккаунт.')}}
+  ready.current=true;cloud.setHydrated(true);const kickoff=setTimeout(()=>void runner.current(),50);
+  const interval=setInterval(()=>{void runner.current();void cloud.refresh().catch(e=>cloud.setError(e.message))},5000);
+  const wake=()=>{if(document.visibilityState!=='hidden'){void runner.current();void cloud.refresh().catch(e=>cloud.setError(e.message))}};
+  window.addEventListener('online',wake);window.addEventListener('focus',wake);document.addEventListener('visibilitychange',wake);window.addEventListener('antonovium-sync',wake);
+  return()=>{if(generation.current===ticket){++generation.current;ready.current=false;pending.current=false}clearTimeout(kickoff);clearInterval(interval);window.removeEventListener('online',wake);window.removeEventListener('focus',wake);document.removeEventListener('visibilitychange',wake);window.removeEventListener('antonovium-sync',wake)};
  },[cloud.authorized,cacheKey]);
- useEffect(()=>{if(!ready.current)return;const changed=Object.entries(flatten(state)).some(([k,v])=>!equal(cache.current[k]?.data,v));if(!changed)return;cloud.setStatus('Ожидает отправки');const timer=setTimeout(()=>void run(),200);return()=>clearTimeout(timer)},[state,cloud.authorized]);
+ useEffect(()=>{if(!ready.current)return;cloud.setStatus('Сохранение…');const timer=setTimeout(()=>void runner.current(),350);return()=>clearTimeout(timer)},[state,cloud.authorized]);
  return {save,flush:run};
 }
 export async function saveRecord(kind:string,id:string,data:any,expected:number){const{data:r,error}=await supabase.rpc('av_save_entity',{p_kind:kind,p_id:id,p_expected:expected,p_data:data});if(error)throw Error(error.message);if(!r.ok)throw Error('Запись изменилась на другом устройстве. Обнови ее перед сохранением.');return r.row as Entity;}

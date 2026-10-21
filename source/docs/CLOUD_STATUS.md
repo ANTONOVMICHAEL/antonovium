@@ -1,46 +1,29 @@
-# Cloud library implementation status
+# Unified workspace update · 21 October 2026
 
-The original production build is retained in `backup/pre-cloud-2026-10-18`.
-The cloud-library branch contains the recovered original React source, new
-library modules, production build, database migrations and Edge Functions.
+The application remains at https://antonovmichael.github.io/antonovium/.
+Hosting, the existing Supabase project, private Yandex bucket and owner allowlist are preserved.
 
-Implemented: private owner-scoped catalog, PDF.js text/image reader, safe FB2
-parser, server-signed Yandex URLs, multipart transfer above 64 MiB, progress,
-bookmarks, anchored notes, metadata editing, local workspace migration and
-version conflicts. Guest local data is kept under its original key; signed-in
-workspaces use separate user keys. No book is committed to GitHub.
+## Behavior
 
-Deployed: four isolated RLS tables, three RPC functions and two Edge Functions in
-the existing Supabase Free project. Existing project tables are unchanged.
+- Email/password sign-in is the default; sessions persist. Email link recovery remains available. An authenticated owner can set a new password.
+- New PDF/FB2 uploads default to the shared library. Explicit device-only file storage remains available.
+- Previously stored local books automatically copy to the private shared library after sign-in. Migration preserves originals, maps anchored notes to the shared book, and imports local progress/bookmarks. Fingerprints prevent duplicate cloud uploads. Interrupted transfers retry while the application is open.
+- Original guest sources, notes, research and manuscript are imported automatically once per account/browser. The original workspace key is retained.
+- Entity sync reads remote revisions before sending local changes. It polls every five seconds and refreshes on focus, visibility changes and reconnection. Unsent edits remain in the user's local workspace.
+- Notes/highlights/comments, research, source texts, manuscript, reader settings and text positions sync. PDF/FB2 progress and bookmarks use the existing owner-scoped entity APIs.
+- Concurrent note changes preserve separate note copies. Other conflicting edits create an explicit conflict record containing both versions. Deletions use tombstones.
+- Local cached backups of migrated files are hidden from the signed-in catalog to avoid duplicate entries and resurrection after shared deletion.
 
-Activation blockers:
+## Verification performed
 
-- The approved owner email is allowlisted in Supabase; it remains unbound until
-  the owner's first authenticated sign-in.
-- Yandex Cloud billing account `account-malachite-8377` is Active.
-  Private standard bucket `antonovium-private-b1g3s2vti2lvotd0ddqb` exists
-  with a 1 GiB capacity limit and authorized-only access. Its CORS rule allows
-  the GitHub Pages origin `https://antonovmichael.github.io` for GET, HEAD,
-  and PUT; incomplete multipart uploads are aborted after 7 days. The bucket
-  is empty (0 objects, 0 B). Dedicated service account
-  `antonovium-storage` (ID `ajeogf1vmhhg7bemj2tb`) has `storage.editor`
-  on this bucket only, verified on its permissions page. A static key was
-  created and the bucket name and key pair were stored in Supabase Vault under
-  `antonovium_yc_s3_credentials`. Only the Edge Function's service role can
-  execute the credentials RPC; `anon` and `authenticated` have no execution
-  permission. A service-role SQL check confirmed all required fields. The
-  temporary transfer copy was deleted. A signed S3 ListObjectsV2 request
-  using the new key succeeded against the private bucket and returned zero
-  objects. Upload/write access still needs an authenticated application test.
-  Never commit the key.
-- Supabase Auth must allow the existing Pages URL as the sign-in redirect;
-  new registrations should be disabled after the approved owner is verified.
-- Real PDF/FB2 uploads, expiring URLs, authorized foreign-owner denial and two
-  independent authenticated browser profiles remain untested.
+- Frontend TypeScript and production build passed.
+- 19 production DOM regression checks passed; two stale selectors in the older test suite were updated to the current button labels.
+- 10 FB2/highlight/migration/source security checks passed.
+- 8 React integration scenarios passed with two independent workspaces and a simulated revision transport: note create/edit propagation; idle stale-device pull; manuscript propagation; simultaneous manuscript conflict; offline retry; deletion propagation; text position sync; no writes for unchanged state.
+- A transaction against the actual database, under the authenticated owner role, verified initial write, revision increment, stale-write rejection and owner isolation. Every verification row was rolled back.
+- Actual private object storage accepted a temporary FB2 object; a signed GET returned exactly the original bytes. Only the temporary verification object was then removed. Credentials were passed through hidden stdin and were never saved in source or files.
+- Browser QA confirmed the new password form and preserved application startup.
 
-Local checks: 19 application checks, 8 FB2/migration/security checks, 4 PDF checks,
-and strict frontend/backend TypeScript checks. Local tests cover the preserved application, FB2 parsing/security/migration and
-an actual 66+ MiB PDF with range reads and an image-only page. These are not
-evidence of a completed cloud upload or cross-device synchronization.
+## Remaining verification limit
 
-Access from a Russian network has not been tested.
+An end-to-end sign-in and book/note transfer between the owner's physical phone and computer has not been performed. That requires the owner to sign in on both devices. No password has been changed or generated on the owner's behalf. The 1 GiB storage limit configured previously is unchanged.

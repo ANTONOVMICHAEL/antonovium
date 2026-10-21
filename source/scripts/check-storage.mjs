@@ -1,0 +1,12 @@
+import {S3Client,PutObjectCommand,GetObjectCommand,DeleteObjectCommand} from '@aws-sdk/client-s3';
+import {getSignedUrl} from '@aws-sdk/s3-request-presigner';
+import {randomUUID} from 'node:crypto';
+import {spawn} from 'node:child_process';
+function request(url,method,body){return new Promise((resolve,reject)=>{const proc=spawn('curl',['--config','-','--silent','--show-error','--fail','--connect-timeout','10','--max-time','30']);let out=[];proc.stdout.on('data',v=>out.push(v));proc.stderr.on('data',()=>{});proc.on('error',()=>reject(Error('Network check failed')));proc.on('close',code=>code===0?resolve(Buffer.concat(out)):reject(Error('Network check failed ('+code+')')));let config='url = '+JSON.stringify(url)+'\nrequest = '+JSON.stringify(method)+'\n';if(body)config+='header = "Content-Type: application/xml"\ndata-binary = '+JSON.stringify(body.toString())+'\n';proc.stdin.end(config)})}
+process.stdout.write('Ready for storage check settings on hidden stdin.\n');
+let raw='';for await(const chunk of process.stdin){raw+=chunk;if(raw.includes('\n'))break}
+const c=JSON.parse(raw),s3=new S3Client({endpoint:'https://storage.yandexcloud.net',region:'ru-central1',credentials:{accessKeyId:c.access_key_id,secretAccessKey:c.secret_access_key},requestChecksumCalculation:'WHEN_REQUIRED',responseChecksumValidation:'WHEN_REQUIRED'});
+const Key=`verification/${randomUUID()}/original.fb2`,args={Bucket:c.bucket,Key};let written=false;
+try{const bytes=Buffer.from('<?xml version="1.0"?><FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0"><body><section><p>Storage verification</p></section></body></FictionBook>');const put=await getSignedUrl(s3,new PutObjectCommand({...args,ContentType:'application/xml',ContentLength:bytes.length}),{expiresIn:60});await request(put,'PUT',bytes);written=true;const url=await getSignedUrl(s3,new GetObjectCommand(args),{expiresIn:60});const response=await request(url,'GET');if(!response.equals(bytes))throw Error('roundtrip mismatch');console.log('PASS private storage write, signed read and byte-for-byte roundtrip');}catch(e){console.log('FAIL storage check:',e.name,e.$metadata?.httpStatusCode??e.message);process.exitCode=1}finally{if(written){const deletion=await getSignedUrl(s3,new DeleteObjectCommand(args),{expiresIn:60});await request(deletion,'DELETE');console.log('PASS only the temporary verification object removed')}s3.destroy()}
+
+process.exit(process.exitCode??0);

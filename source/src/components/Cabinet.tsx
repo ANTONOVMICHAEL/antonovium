@@ -2,9 +2,12 @@ import { useApp } from '../context';
 import { Arrow, Label } from './UI';
 import NoteList from './NoteList';
 import {CloudUploadButton} from './CloudBooks';
+import {useCloud} from '../cloud';
+import {useLocalBooks} from '../localBooks';
 export default function Cabinet(){
  const{state,update,openSource,navigate,openResearch,composeNote,openCategory}=useApp();
- const source=state.sources.find(s=>s.id===state.sourceId)??state.sources[0];
+ const cloud=useCloud(),local=useLocalBooks(),book=cloud.books.find(b=>b.id===state.sourceId)??local.books.find(b=>b.id===state.sourceId);
+ const source=book?{id:book.id,title:book.title,author:book.author,format:'digital' as const,demo:false,sections:[]}:state.sources.find(s=>s.id===state.sourceId)??state.sources[0];
  const section=source?.sections.find(s=>s.id===state.sectionId)??source?.sections[0];
  const number=String((source?.sections.findIndex(s=>s.id===section?.id)??0)+1).padStart(2,'0');
  const date=new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'long',weekday:'long',timeZone:'Europe/Saratov'}).format(new Date());

@@ -30,7 +30,7 @@ export function decodeState(value:unknown): SavedState {
   for(const research of s.research){if(!research||typeof research.id!=='string'||typeof research.title!=='string'||typeof research.question!=='string'||typeof research.hypothesis!=='string'||!Array.isArray(research.categories)||research.categories.some(c=>typeof c!=='string')||typeof research.archived!=='boolean')throw new Error('Некорректные данные исследования.');}
   const source=s.sources.find(x=>x.id===s.sourceId)??s.sources.find(x=>x.sections.length)??s.sources[0];
   return {...defaultState,...s, theme:['cobalt','plum','emerald'].includes(s.theme)?s.theme:'cobalt',screen:screens.includes(s.screen)?s.screen:'cabinet',mode:['reading','research','compare'].includes(s.mode)?s.mode:'research',
-    sourceId:source?.id??'', sectionId:source?.sections.find(x=>x.id===s.sectionId)?.id??source?.sections[0]?.id??'',
+    sourceId:typeof s.sourceId==='string'?s.sourceId:source?.id??'', sectionId:s.sources.some(x=>x.id===s.sourceId)?source?.sections.find(x=>x.id===s.sectionId)?.id??source?.sections[0]?.id??'':s.sectionId??'',
     fontSize:Math.max(16,Math.min(26,Number(s.fontSize)||20)),lineHeight:Math.max(1.5,Math.min(2.1,Number(s.lineHeight)||1.8)),
     positions:s.positions&&typeof s.positions==='object'?Object.fromEntries(Object.entries(s.positions).filter(([,v])=>typeof v==='number'&&Number.isFinite(v)&&v>=0)):{},
     compareExcerpt:s.compareExcerpt&&typeof s.compareExcerpt.quote==='string'&&typeof s.compareExcerpt.sourceId==='string'&&Array.isArray(s.compareExcerpt.anchors)&&s.compareExcerpt.anchors.every(a=>a&&typeof a.paragraphId==='string'&&Number.isInteger(a.start)&&Number.isInteger(a.end)&&a.start>=0&&a.end>=a.start)?s.compareExcerpt:undefined,
