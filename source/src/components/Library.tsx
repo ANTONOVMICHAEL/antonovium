@@ -33,7 +33,7 @@ export default function Library(){
  function switchView(next:'list'|'shelf'){setView(next);localStorage.setItem('antonovium.library.view',next)}
  return <main className="page library-page library-v3 page-enter" id="main">
   <header className="library-v3-head">
-   <div><span className="library-v3-kicker">ANTONOVIUM <i/> ИСТОЧНИКИ И МАТЕРИАЛЫ</span><h1>Библиотека<span>.</span></h1></div>
+   <div><h1>Библиотека</h1></div>
    <div className="library-v3-add"><CloudUploadButton/><button className="button outline" onClick={()=>setAdding(true)}>Добавить текст или издание <span aria-hidden="true">+</span></button></div>
   </header>
   <div className="library-v3-searchbar">
@@ -42,7 +42,7 @@ export default function Library(){
   </div>
   <div className="library-v3-body">
    <aside className="library-v3-index" aria-label="Разделы библиотеки">
-    <span className="library-v3-index-label">КАТАЛОГ / ВИД</span>
+    <span className="library-v3-index-label">Каталог</span>
     <div role="group" aria-label="Показать источники">
      {([['all','Все источники'],['files','PDF и FB2'],['digital','Цифровые'],['paper','Бумажные']] as const).map(([id,label],i)=><button aria-pressed={filter===id} className={filter===id?'active':''} key={id} onClick={()=>setFilter(id)}><span>0{i+1}</span>{label}<Arrow diagonal/></button>)}
     </div>
@@ -50,11 +50,11 @@ export default function Library(){
    </aside>
    <div className={`library-v3-results catalog-${view}`}>
     {showFiles&&<section className="library-v3-group" aria-label="Книги PDF и FB2">
-     <div className="library-v3-grouphead"><span><b>01</b> / КНИГИ PDF И FB2</span><small>Личное облако и файлы на устройстве</small></div>
+     <div className="library-v3-grouphead"><span>Книги PDF и FB2</span><small>Личное облако и файлы на устройстве</small></div>
      <CloudBooks search={search}/>{!fileMatches&&<Empty title={term?'Книги не найдены':'Здесь появятся PDF и FB2'}>{term?'Попробуй другое название или автора.':'Добавь книгу с устройства и выбери, где ее хранить.'}</Empty>}
     </section>}
     {showTexts&&<section className="library-v3-group" aria-label="Тексты и бумажные издания">
-     <div className="library-v3-grouphead"><span><b>{showFiles?'02':'01'}</b> / {filter==='paper'?'БУМАЖНЫЕ ИЗДАНИЯ':'ТЕКСТЫ И ИЗДАНИЯ'}</span><label>Порядок <select value={sort} onChange={e=>setSort(e.target.value as typeof sort)}><option value="recent">Недавно добавленные</option><option value="title">По названию</option><option value="author">По автору</option></select></label></div>
+     <div className="library-v3-grouphead"><span>{filter==='paper'?'Бумажные издания':'Тексты и издания'}</span><label>Порядок <select value={sort} onChange={e=>setSort(e.target.value as typeof sort)}><option value="recent">Недавно добавленные</option><option value="title">По названию</option><option value="author">По автору</option></select></label></div>
      {sources.length?<div className="library-v3-source-grid">{sources.map((s,i)=><article className="source-row library-v3-source" key={s.id}>
       <span className="row-number">{String(i+1).padStart(2,'0')}</span><div className="source-main"><div className="note-meta"><span>{s.format==='paper'?'Бумажное издание':'Цифровой текст'}</span>{s.demo&&<span className="demo-label">Демонстрационный материал</span>}</div>
        <button className="source-title" onClick={()=>openSource(s.id)}>{s.title}</button><p>{[s.author,s.year].filter(Boolean).join(' · ')||s.subtitle}</p>

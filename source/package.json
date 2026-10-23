@@ -13,7 +13,8 @@
     "test:pdf": "node scripts/test-pdf.mjs",
     "test:sync": "node scripts/test-sync.mjs",
     "check:edge": "node scripts/check-edge.mjs",
-    "check:published": "node scripts/check-published.mjs"
+    "check:published": "node scripts/check-published.mjs",
+    "test:reader": "node scripts/test-reader-gestures.mjs"
   },
   "dependencies": {
     "@noble/hashes": "2.4.0",

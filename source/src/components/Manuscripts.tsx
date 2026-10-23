@@ -143,7 +143,7 @@ export default function Manuscripts() {
 
   return <main className={`page manuscript-studio page-enter ${focus ? 'editor-focus' : ''}`} id="main">
     <header className="ms-intro">
-      <div className="ms-intro-copy"><span className="ms-kicker">06 / РАБОЧИЙ ТЕКСТ</span><h1>Научный редактор<span aria-hidden="true">.</span></h1><p>Здесь мысль остается твоей. Продолжай рукопись, сверяясь с записями и источниками.</p></div>
+      <div className="ms-intro-copy"><h1>Редактор рукописей</h1><p>Продолжай рукопись, сверяясь с заметками и источниками.</p></div>
       <div className="ms-intro-aside"><span>{isDemo ? 'Демонстрационная заготовка' : 'Личная рукопись'}</span><span className="ms-status"><i aria-hidden="true"/>Изменения сохраняются при вводе{cloud.authorized ? ` · облако: ${cloud.status || 'состояние уточняется'}` : ' · на устройстве'}</span></div>
     </header>
 
@@ -155,7 +155,7 @@ export default function Manuscripts() {
 
     <div className={`ms-workspace ${showContext && !focus ? 'has-context' : ''}`}>
       <section className="ms-document" aria-label="Текст рукописи" style={{ '--ms-column-width': `${columnWidth}px` } as CSSProperties}>
-        <div className="ms-document-top"><span>РУКОПИСЬ / 01</span><span>СОБСТВЕННЫЙ ТЕКСТ</span></div>
+        <div className="ms-document-top"><span>Текущая рукопись</span><span>Сохраняется автоматически</span></div>
         <div className="ms-document-inner">
           <label className="ms-field-label" htmlFor="ms-title">Название работы</label>
           <textarea id="ms-title" className="ms-title" rows={2} value={state.manuscriptTitle} onChange={e => update({ manuscriptTitle: e.target.value })} placeholder="Название рукописи" maxLength={240}/>
@@ -168,7 +168,7 @@ export default function Manuscripts() {
 
       {showContext && !focus && <><button className="ms-context-scrim" type="button" aria-label="Закрыть исследовательские материалы" onClick={() => setShowContext(false)} />
         <aside ref={contextRef} className="ms-context" role={compact ? 'dialog' : undefined} aria-modal={compact ? 'true' : undefined} aria-label="Исследовательские материалы">
-          <div className="ms-context-head"><div><span className="ms-kicker">ПОД РУКОЙ</span><h2>Контекст</h2></div><button className="ms-context-close" type="button" aria-label="Закрыть исследовательские материалы" onClick={() => setShowContext(false)}>×</button></div>
+          <div className="ms-context-head"><div><h2>Контекст</h2></div><button className="ms-context-close" type="button" aria-label="Закрыть исследовательские материалы" onClick={() => setShowContext(false)}>×</button></div>
           <div className="ms-tabs" role="group" aria-label="Материалы к рукописи">{([['notes', 'Записи'], ['sources', 'Источники'], ['outline', 'Структура']] as const).map(([key, label]) => <button key={key} type="button" aria-pressed={panel === key} className={panel === key ? 'active' : ''} onClick={() => setPanel(key)}>{label}</button>)}</div>
           <div className="ms-context-scroll">
             {panel === 'notes' && <><p className="ms-panel-intro">Вставь запись в позицию курсора или вернись к первоисточнику.</p><label className="ms-search"><span className="sr-only">Поиск по записям</span><input type="search" value={noteQuery} onChange={e => setNoteQuery(e.target.value)} placeholder="Найти запись"/></label>

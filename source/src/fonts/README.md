@@ -1,13 +1,13 @@
 # Typefaces
 
-The app self-hosts variable web fonts from the official Google Fonts `google/fonts` repository:
+Local variable WOFF2 fonts from the official Google Fonts repository, downloaded 2026-10-23. Complete original SIL OFL 1.1 licenses and copyright notices accompany each family.
 
-| File | Source | Range | Role |
-| --- | --- | --- | --- |
-| `Unbounded.woff2` | [`ofl/unbounded/Unbounded[wght].ttf`](https://github.com/google/fonts/blob/main/ofl/unbounded/Unbounded%5Bwght%5D.ttf) | 200–900 | Product mark and selective display accents |
-| `Onest.woff2` | [`ofl/onest/Onest[wght].ttf`](https://github.com/google/fonts/blob/main/ofl/onest/Onest%5Bwght%5D.ttf) | 100–900 | Interface and navigation |
-| `Literata.woff2`, `Literata-Italic.woff2` | [`ofl/literata`](https://github.com/google/fonts/tree/main/ofl/literata) variable TTFs | 200–900, optical size 7–72 | Long-form source reading |
+| File | Official source | Role |
+| --- | --- | --- |
+| `IBMPlexSans.woff2` | https://github.com/google/fonts/tree/main/ofl/ibmplexsans | Interface, controls and working headings; weight 100–700, default width 100 |
+| `Manrope.woff2` | https://github.com/google/fonts/tree/main/ofl/manrope | Page headings and product mark; weight 200–800 |
+| `Literata.woff2`, `Literata-Italic.woff2` | https://github.com/google/fonts/tree/main/ofl/literata | Book titles and long reading; weight 200–900 |
 
-Downloaded on 2026-10-23 from Google Fonts and converted from original TTF to WOFF2 with fontTools 4.61.1. All four web fonts contain Cyrillic glyphs, verified against the Russian alphabet in the font cmap. The fonts are distributed under SIL Open Font License 1.1; the complete copyright notices and license texts are in `onest-OFL.txt`, `unbounded-OFL.txt`, and `literata-OFL.txt`.
+Manrope, IBM Plex Sans, Inter and the previous Onest were compared in Chromium using identical Russian headings, labels, prose, Cyrillic letterforms and numbers. IBM Plex Sans was selected for compact interface text, Manrope for the larger hierarchy, Literata for continuous reading. This is a visual design judgment, not a performance benchmark.
 
-The CSS loads fonts locally and uses `font-display: swap`; no font API request is needed at runtime. PDF pages retain the typography in their embedded artwork.
+Full Russian character coverage (including both forms of е/ё, quotation marks and punctuation) was checked in each cmap. The original variable TTFs were converted to WOFF2 using fontTools. No external font request is made at runtime. PDF typography is unchanged.

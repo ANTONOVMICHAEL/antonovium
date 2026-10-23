@@ -10,31 +10,26 @@ import type {Note} from '../types';
 import NoteList from './NoteList';
 import PDFScrollPage from './PDFScrollPage';
 import ReaderRail from './ReaderRail';
+import {ReaderGestures,readerInteractive,type ReaderContact} from '../readerGestures';
+import {fb2Geometry,visibleFB2Position,restoreFB2Position} from '../fb2Pagination';
 export default function BookReader({book}:{book:Book}){
  const c=useCloud(),{state,update,navigate,composeNote,toast,focusParagraph,setFocusParagraph,setSelectedNoteId,setWilkins}=useApp();
  const[anchor,setAnchor]=useState<FileAnchor>({format:book.format,page:1}),[pdf,setPDF]=useState<PDFDocumentProxy|null>(null),[fb2,setFB2]=useState<FB2Document|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[reload,setReload]=useState(0),[zoom,setZoom]=useState(1),[contents,setContents]=useState(false),[settings,setSettings]=useState(false),[selected,setSelected]=useState<{quote:string;anchor:FileAnchor}|null>(null),[search,setSearch]=useState(''),[results,setResults]=useState<{page:number;text:string}[]>([]),[searching,setSearching]=useState(false),[hasText,setHasText]=useState(true),[visiblePage,setVisiblePage]=useState(1);
- const scroll=useRef<HTMLDivElement>(null),documentRef=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),textLayer=useRef<HTMLDivElement>(null),revision=useRef(0),touched=useRef(false),current=useRef(anchor),saveTimer=useRef<ReturnType<typeof setTimeout>|null>(null),restoring=useRef(false),latestRecords=useRef(c.records),selectionTimer=useRef<ReturnType<typeof setTimeout>|null>(null),touchStart=useRef<{x:number;y:number;time:number}|null>(null);latestRecords.current=c.records;
+ const scroll=useRef<HTMLDivElement>(null),documentRef=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),textLayer=useRef<HTMLDivElement>(null),revision=useRef(0),touched=useRef(false),current=useRef(anchor),saveTimer=useRef<ReturnType<typeof setTimeout>|null>(null),restoring=useRef(false),latestRecords=useRef(c.records),selectionTimer=useRef<ReturnType<typeof setTimeout>|null>(null);latestRecords.current=c.records;
+ const gestures=useRef(new ReaderGestures()),positionEpoch=useRef(0),restoreEdge=useRef(false),geometryPending=useRef(false),turnQueue=useRef<number[]>([]),turnHandler=useRef<(direction:number)=>void>(()=>{}),settleFrame=useRef(0),ghostClick=useRef(false),lastSize=useRef('');
+ const [positionRequest,setPositionRequest]=useState(0),[geometryRevision,setGeometryRevision]=useState(0);
+ const supportsPointer=typeof window.PointerEvent!=='undefined';
  const notes=useMemo(()=>state.notes.filter(n=>n.sourceId===book.id),[state.notes,book.id]),[deviceBookmarks,setDeviceBookmarks]=useState(()=>book.local?localBookmarks(book.id):[]),bookmarks=book.local?deviceBookmarks:c.records.filter(r=>r.kind==='bookmark'&&r.data.bookId===book.id&&!r.data.deleted);
  const owner=book.local?'local':c.session?.user.id??'guest';const cacheKey=`antonovium.reading.${owner}.${book.id}`;const saving=useRef(false),pendingProgress=useRef<FileAnchor|null>(null);
  const layoutKey=`antonovium.layout.${owner}.${book.id}`;
  const[layout,setLayout]=useState<'scroll'|'pages'>(()=>localStorage.getItem(layoutKey)==='pages'?'pages':'scroll'),[notesOpen,setNotesOpen]=useState(false),[controlsOpen,setControlsOpen]=useState(false),[atEnd,setAtEnd]=useState(false),[pageWidth,setPageWidth]=useState(680),[fb2Page,setFb2Page]=useState(1),[fb2Pages,setFb2Pages]=useState(1),[fb2Results,setFb2Results]=useState<{id:string;offset:number;text:string}[]>([]);
  useEffect(()=>{update({mode:'reading'})},[book.id]);
- useEffect(()=>{if(!scroll.current)return;const observer=new ResizeObserver(()=>setPageWidth(Math.max(220,Math.min(1000,scroll.current!.clientWidth-48))));observer.observe(scroll.current);return()=>observer.disconnect()},[]);
+ useEffect(()=>{if(!scroll.current)return;const observer=new ResizeObserver(()=>{const frame=scroll.current!;const size=`${frame.clientWidth}:${frame.clientHeight}`;if(size===lastSize.current)return;lastSize.current=size;if(book.format==='fb2'){restoring.current=true;geometryPending.current=true}setPageWidth(Math.max(220,Math.min(1000,frame.clientWidth-48)));setGeometryRevision(v=>v+1)});observer.observe(scroll.current);return()=>observer.disconnect()},[]);
  function visibleFB2Anchor():FileAnchor{
-  const container=scroll.current,root=documentRef.current;if(!container||!root)return current.current;
-  const box=container.getBoundingClientRect(),top=box.top+Math.min(55,box.height*.15),left=box.left+Math.min(60,box.width*.18);
-  const caret=(document as any).caretPositionFromPoint?.(left,top),range=(document as any).caretRangeFromPoint?.(left,top);
-  const caretNode:Node|undefined=caret?.offsetNode??range?.startContainer;
-  const parent=caretNode?.nodeType===1?caretNode as Element:caretNode?.parentElement;
-  const visible=(p:HTMLElement)=>Array.from(p.getClientRects()).some(r=>layout==='pages'?r.right>box.left+18&&r.left<box.right-18&&r.bottom>box.top+18&&r.top<box.bottom:r.bottom>top);
-  const candidate=parent?.closest<HTMLElement>('[data-fb2-paragraph]');
-  const node=candidate&&visible(candidate)?candidate:Array.from(root.querySelectorAll<HTMLElement>('[data-fb2-paragraph]')).find(visible);
-  if(!node||!root.contains(node))return {...current.current,page:layout==='pages'?Math.round(container.scrollLeft/Math.max(1,container.clientWidth))+1:undefined};
-  let offset=0;if(caretNode&&node.contains(caretNode)){try{const before=document.createRange();before.selectNodeContents(node);before.setEnd(caretNode,caret?.offset??range?.startOffset??0);offset=before.toString().length}catch{}}
-  return {...current.current,chapter:chapter?.id??current.current.chapter,paragraph:node.id,offset,page:layout==='pages'?Math.round(container.scrollLeft/Math.max(1,container.clientWidth))+1:undefined};
+  return scroll.current&&documentRef.current?visibleFB2Position(scroll.current,documentRef.current,current.current.chapter,layout==='pages'):current.current;
  }
- function changeLayout(value:'scroll'|'pages'){if(value===layout)return;if(book.format==='fb2')remember(visibleFB2Anchor());localStorage.setItem(layoutKey,value);restoring.current=true;setLayout(value);setSelected(null);setAtEnd(false);setControlsOpen(false)}
- function changeTypography(change:()=>void){if(book.format==='fb2'){remember(visibleFB2Anchor());restoring.current=true}change()}
+ function changeLayout(value:'scroll'|'pages'){if(value===layout)return;if(book.format==='fb2')remember(visibleFB2Anchor());localStorage.setItem(layoutKey,value);restoring.current=true;geometryPending.current=book.format==='fb2';setLayout(value);setSelected(null);setAtEnd(false);setControlsOpen(false)}
+ function changeTypography(change:()=>void){if(book.format==='fb2'){remember(visibleFB2Anchor());restoring.current=true;geometryPending.current=true}change()}
  function openAnnotation(note:Note){setSelectedNoteId(note.id);setNotesOpen(true)}
  useEffect(()=>{if(book.local){const at=localProgress(book.id);if(at&&!touched.current){current.current=at;setAnchor(at)}return}const row=c.records.find(r=>r.kind==='progress'&&r.entity_id===book.id);if(!touched.current&&row){revision.current=row.revision;current.current=row.data.anchor;setAnchor(row.data.anchor)}},[c.records,book.id]);
  useEffect(()=>{try{const pending=JSON.parse(localStorage.getItem(cacheKey)??'null');if(pending?.anchor&&(book.local||pending.unsent)){revision.current=pending.revision??0;touched.current=true;current.current=pending.anchor;setAnchor(pending.anchor);if(!book.local)void persist(pending.anchor)}}catch{}},[book.id]);
@@ -54,7 +49,7 @@ export default function BookReader({book}:{book:Book}){
  }
  async function persist(at:FileAnchor){pendingProgress.current=at;if(saving.current)return;saving.current=true;try{while(pendingProgress.current){const next=pendingProgress.current;pendingProgress.current=null;await saveOne(next)}}finally{saving.current=false}}
  function remember(at:FileAnchor){current.current=at;touched.current=true;localStorage.setItem(cacheKey,JSON.stringify({anchor:at,revision:revision.current,unsent:!book.local}));if(book.local)return;if(saveTimer.current)clearTimeout(saveTimer.current);saveTimer.current=setTimeout(()=>void persist(at),600)}
- function move(at:FileAnchor){remember(at);setAnchor(at);setSelected(null);if(book.format==='pdf'&&layout==='scroll'&&scroll.current){restoring.current=true;requestAnimationFrame(()=>{const page=scroll.current?.querySelector<HTMLElement>(`[data-page="${at.page??1}"]`);if(page&&scroll.current)scroll.current.scrollTop+=page.getBoundingClientRect().top-scroll.current.getBoundingClientRect().top+(at.fraction??0)*page.clientHeight;requestAnimationFrame(()=>restoring.current=false)})}}
+ function move(at:FileAnchor,end=false){positionEpoch.current++;restoreEdge.current=end;geometryPending.current=book.format==='fb2';remember(at);setAnchor(at);setPositionRequest(v=>v+1);setSelected(null);if(book.format==='pdf'&&layout==='scroll'&&scroll.current){restoring.current=true;requestAnimationFrame(()=>{const page=scroll.current?.querySelector<HTMLElement>(`[data-page="${at.page??1}"]`);if(page&&scroll.current)scroll.current.scrollTop+=page.getBoundingClientRect().top-scroll.current.getBoundingClientRect().top+(at.fraction??0)*page.clientHeight;requestAnimationFrame(()=>restoring.current=false)})}}
  useEffect(()=>()=>{if(saveTimer.current){clearTimeout(saveTimer.current);void persist(current.current)}if(selectionTimer.current)clearTimeout(selectionTimer.current)},[]);
  useEffect(()=>{if(!focusParagraph?.startsWith('file:'))return;try{move(JSON.parse(focusParagraph.slice(5)))}catch{}setFocusParagraph(null)},[focusParagraph]);
  useEffect(()=>{if(!book.local&&!c.hydrated)return;let stopped=false,task:{destroy:()=>Promise<void>}|undefined;const controller=new AbortController();setLoading(true);setError('');
@@ -76,15 +71,32 @@ export default function BookReader({book}:{book:Book}){
   return()=>{stopped=true;render?.cancel();layer?.cancel()};
  },[pdf,anchor.page,zoom,pageWidth,layout]);
  const chapter=fb2?.chapters.find(ch=>ch.id===anchor.chapter)??fb2?.chapters[0];
- useEffect(()=>{if(!fb2||!documentRef.current||!scroll.current)return;restoring.current=true;const frame=requestAnimationFrame(()=>{const at=current.current,target=at.paragraph?documentRef.current?.querySelector<HTMLElement>(`#${CSS.escape(at.paragraph)}`):undefined,container=scroll.current!;
-  if(target){let rect=target.getBoundingClientRect();if(at.offset){const walker=document.createTreeWalker(target,NodeFilter.SHOW_TEXT);let node:Node|null,left=at.offset;while((node=walker.nextNode())){if(left<=(node.textContent?.length??0)){const range=document.createRange();range.setStart(node,left);range.collapse(true);if(range.getBoundingClientRect().height)rect=range.getBoundingClientRect();break}left-=node.textContent?.length??0}}
-   if(layout==='pages'){const step=Math.max(1,container.clientWidth),pageFromText=Math.floor((rect.left-container.getBoundingClientRect().left+container.scrollLeft)/step),page=at.page&&!at.offset?at.page-1:pageFromText;container.scrollLeft=Math.max(0,Math.min(container.scrollWidth-step,page*step));setFb2Page(Math.round(container.scrollLeft/step)+1)}
-   else container.scrollTop+=rect.top-container.getBoundingClientRect().top-30;
-   target.classList.add('paragraph-focus');setTimeout(()=>target.classList.remove('paragraph-focus'),1800);
-  }else{container.scrollTop=0;const step=Math.max(1,container.clientWidth);container.scrollLeft=layout==='pages'&&at.page?Math.min(container.scrollWidth-step,(at.page-1)*step):0;setFb2Page(Math.round(container.scrollLeft/step)+1)}
-  requestAnimationFrame(()=>{restoring.current=false;if(layout==='scroll')setAtEnd(container.scrollHeight-container.scrollTop-container.clientHeight<100)})});return()=>cancelAnimationFrame(frame)},[chapter?.id,anchor.paragraph,anchor.offset,fb2,state.fontSize,state.lineHeight,state.wide,state.readerFont,layout,pageWidth]);
+ // Only explicit navigation or a geometry change may restore FB2. Saving progress never does.
+ useEffect(()=>{
+  if(!fb2||!documentRef.current||!scroll.current)return;
+  const epoch=++positionEpoch.current;let frame=0,done=0,stopped=false;
+  restoring.current=true;geometryPending.current=true;
+  frame=requestAnimationFrame(()=>{
+   if(stopped||epoch!==positionEpoch.current||!scroll.current||!documentRef.current)return;
+   const container=scroll.current,root=documentRef.current,at=current.current,end=restoreEdge.current;
+   restoreFB2Position(container,root,at,layout==='pages',end);restoreEdge.current=false;
+   done=requestAnimationFrame(()=>{
+    if(stopped||epoch!==positionEpoch.current)return;
+    const geometry=fb2Geometry(container,root);setFb2Pages(geometry.pages);setFb2Page(geometry.page);
+    remember(at.paragraph&&!end?{...at,page:layout==='pages'?geometry.page:undefined}:visibleFB2Anchor());restoring.current=false;geometryPending.current=false;
+    if(layout==='scroll')setAtEnd(container.scrollHeight-container.scrollTop-container.clientHeight<100);
+    drainTurns();
+   });
+  });
+  return()=>{stopped=true;cancelAnimationFrame(frame);cancelAnimationFrame(done)};
+ },[chapter?.id,positionRequest,fb2,state.fontSize,state.lineHeight,state.wide,state.readerFont,layout,pageWidth,geometryRevision]);
  useEffect(()=>{if(!fb2||!documentRef.current)return;paintFB2Highlights(documentRef.current,notes.filter(n=>n.fileAnchor?.chapter===chapter?.id))},[fb2,chapter?.id,notes,layout]);
- useEffect(()=>{if(!fb2||layout!=='pages'||!documentRef.current||!scroll.current)return;const frame=scroll.current,documentElement=documentRef.current;const updatePages=()=>{const pages=Math.max(1,Math.ceil(frame.scrollWidth/Math.max(1,frame.clientWidth)));setFb2Pages(pages);setFb2Page(Math.min(pages,Math.round(frame.scrollLeft/Math.max(1,frame.clientWidth))+1))};const observer=new ResizeObserver(updatePages);observer.observe(documentElement);observer.observe(frame);documentElement.addEventListener('load',updatePages,true);updatePages();return()=>{observer.disconnect();documentElement.removeEventListener('load',updatePages,true)}},[fb2,chapter?.id,layout,pageWidth,state.fontSize,state.lineHeight,state.wide,state.readerFont]);
+ useEffect(()=>{
+  const root=documentRef.current;if(!fb2||!root)return;
+  const reflow=()=>{restoring.current=true;geometryPending.current=true;setGeometryRevision(v=>v+1)};
+  root.addEventListener('load',reflow,true);document.fonts?.addEventListener('loadingdone',reflow);
+  return()=>{root.removeEventListener('load',reflow,true);document.fonts?.removeEventListener('loadingdone',reflow)};
+ },[fb2,chapter?.id]);
  useEffect(()=>{if(layout!=='scroll'||!pdf||!scroll.current)return;restoring.current=true;const frame=requestAnimationFrame(()=>{const page=scroll.current?.querySelector<HTMLElement>(`[data-page="${current.current.page??1}"]`);if(page&&scroll.current)scroll.current.scrollTop+=page.getBoundingClientRect().top-scroll.current.getBoundingClientRect().top+(current.current.fraction??0)*page.clientHeight;requestAnimationFrame(()=>restoring.current=false)});return()=>cancelAnimationFrame(frame)},[layout,pdf]);
  function onScroll(){if(restoring.current||loading)return;const container=scroll.current;if(!container)return;if(layout==='scroll')setAtEnd(container.scrollHeight-container.scrollTop-container.clientHeight<100);
   if(book.format==='pdf'){
@@ -94,7 +106,7 @@ export default function BookReader({book}:{book:Book}){
    const number=Number(page.dataset.page),fraction=Math.max(0,Math.min(1,(box.top-page.getBoundingClientRect().top)/Math.max(1,page.clientHeight)));
    const at:FileAnchor={format:'pdf',page:number,fraction};remember(at);if(anchor.page!==number)setAnchor(at);
   }else{
-   if(layout==='pages'){const pages=Math.max(1,Math.ceil(container.scrollWidth/Math.max(1,container.clientWidth)));setFb2Pages(pages);setFb2Page(Math.min(pages,Math.round(container.scrollLeft/Math.max(1,container.clientWidth))+1))}
+   if(layout==='pages'){const geometry=fb2Geometry(container,documentRef.current!);setFb2Pages(geometry.pages);setFb2Page(geometry.page)}
    const at=visibleFB2Anchor();if(at.paragraph||layout==='pages')remember(at);
   }
  }
@@ -116,27 +128,76 @@ export default function BookReader({book}:{book:Book}){
  function highlight(){if(!selected)return;const at=selected.anchor,id=newId(),quote=selected.quote;const value:Note={id,sourceId:book.id,sectionId:book.format==='pdf'?`pdf:${at.page}`:at.chapter??'',quote,anchors:[],fileAnchor:at,sourceTitle:book.title,locator:book.format==='pdf'?`Страница PDF ${at.page}`:`Глава: ${chapter?.title??''}`,title:quote.slice(0,80)+(quote.length>80?'…':''),body:'',kind:'thought',categories:[],createdAt:new Date().toISOString(),evidenceType:'highlight',demo:false};
   update(s=>({...s,notes:[value,...s.notes]}));setSelected(null);window.getSelection()?.removeAllRanges();toast(book.local?'Выделение сохранено на устройстве':'Выделение сохранено в облаке');}
  function note(){const at=selected?.anchor??current.current;composeNote({sourceId:book.id,sectionId:book.format==='pdf'?`pdf:${at.page}`:at.chapter??'',quote:selected?.quote??'',anchors:[],locator:book.format==='pdf'?`Страница PDF ${at.page}`:`Глава: ${chapter?.title??''}`,fileAnchor:at,sourceTitle:book.title});setSelected(null)}
- function fb2Turn(direction:number){const frame=scroll.current;if(!frame||!fb2)return;const step=Math.max(1,frame.clientWidth),next=(Math.round(frame.scrollLeft/step)+direction)*step,max=frame.scrollWidth-step;
-  if(next<0||next>max+frame.clientWidth*.25){const index=fb2.chapters.findIndex(ch=>ch.id===chapter?.id),other=fb2.chapters[index+direction];if(other)move({format:'fb2',chapter:other.id});return}
-  frame.scrollLeft=Math.max(0,Math.min(max,next));
-  const page=Math.round(frame.scrollLeft/step)+1;setFb2Page(page);
-  const at=visibleFB2Anchor();remember({...at,page});
+ function drainTurns(){
+  // The layout is ready: consume every queued contact now. One request per
+  // animation frame loses responsiveness when a mobile browser throttles frames.
+  while(!geometryPending.current&&turnQueue.current.length){
+   const direction=turnQueue.current.shift();if(direction!==undefined)turnHandler.current(direction);
+  }
  }
+ function fb2Turn(direction:number){
+  const frame=scroll.current,root=documentRef.current;if(!frame||!root||!fb2)return;
+  if(geometryPending.current){turnQueue.current.push(direction);return}
+  const geometry=fb2Geometry(frame,root),next=geometry.page+direction;
+  if(next<1||next>geometry.pages){
+   const index=fb2.chapters.findIndex(ch=>ch.id===current.current.chapter),other=fb2.chapters[index+direction];
+   if(other)move({format:'fb2',chapter:other.id},direction<0);return;
+  }
+  const epoch=++positionEpoch.current;restoring.current=true;
+  frame.scrollLeft=Math.max(0,Math.min(geometry.max,(next-1)*geometry.step));
+  setFb2Page(next);remember(visibleFB2Anchor());
+  cancelAnimationFrame(settleFrame.current);
+  settleFrame.current=requestAnimationFrame(()=>{
+   if(epoch!==positionEpoch.current)return;
+   remember(visibleFB2Anchor());restoring.current=false;drainTurns();
+  });
+ }
+ turnHandler.current=fb2Turn;
  function pdfTurn(direction:number){if(!pdf)return;const next=(current.current.page??1)+direction;if(next>=1&&next<=pdf.numPages)move({format:'pdf',page:next})}
- function onReaderKey(e:React.KeyboardEvent){if(layout!=='pages'||!scroll.current?.contains(e.target as Node)||e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||e.target instanceof HTMLInputElement||e.target instanceof HTMLTextAreaElement||e.target instanceof HTMLSelectElement||e.target instanceof HTMLButtonElement||e.target instanceof HTMLAnchorElement||(e.target as HTMLElement).isContentEditable||window.getSelection()?.toString())return;if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();book.format==='pdf'?pdfTurn(1):fb2Turn(1)}else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();book.format==='pdf'?pdfTurn(-1):fb2Turn(-1)}}
- function onReaderTouchEnd(e:React.TouchEvent){scheduleCapture();const start=touchStart.current;touchStart.current=null;if(book.format!=='pdf'||layout!=='pages'||zoom>1||!start||Date.now()-start.time>550||window.getSelection()?.toString())return;const touch=e.changedTouches[0];if(!touch)return;const dx=touch.clientX-start.x,dy=touch.clientY-start.y;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.5)pdfTurn(dx<0?1:-1)}
- useEffect(()=>{const changed=()=>{const selection=window.getSelection();if(!selection||selection.isCollapsed||!selection.anchorNode||!scroll.current?.contains(selection.anchorNode))return;scheduleCapture()};document.addEventListener('selectionchange',changed);return()=>document.removeEventListener('selectionchange',changed)},[book.id]);
+ function onReaderKey(e:React.KeyboardEvent){if(layout!=='pages'||!scroll.current?.contains(e.target as Node)||e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||readerInteractive(e.target)||window.getSelection()?.toString())return;if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();book.format==='pdf'?pdfTurn(1):fb2Turn(1)}else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();book.format==='pdf'?pdfTurn(-1):fb2Turn(-1)}}
+ function selectionActive(){const selection=window.getSelection();return !!selection&&!selection.isCollapsed&&!!selection.toString()}
+ function gestureBlocked(target:EventTarget|null){return layout!=='pages'||loading||readerInteractive(target)||selectionActive()||book.format==='pdf'&&(zoom>1||(window.visualViewport?.scale??1)>1.01)}
+ function beginContact(point:ReaderContact,target:EventTarget|null){ghostClick.current=false;gestures.current.start(point,gestureBlocked(target))}
+ function endContact(point:ReaderContact,target:EventTarget|null,preventDefault:()=>void){
+  scheduleCapture();const frame=scroll.current;if(!frame)return;
+  const action=gestures.current.end(point,frame.getBoundingClientRect(),gestureBlocked(target));
+  if(!action)return;
+  // Consume the compatibility click before it can hit text or a newly moved annotation.
+  ghostClick.current=true;preventDefault();
+  if(action==='tools'){setControlsOpen(v=>!v);setContents(false);setSettings(false)}
+  else {setControlsOpen(false);book.format==='pdf'?pdfTurn(action==='next'?1:-1):fb2Turn(action==='next'?1:-1)}
+ }
+ const pointerPoint=(e:React.PointerEvent):ReaderContact=>({id:e.pointerId,x:e.clientX,y:e.clientY,time:e.timeStamp});
+ function touchContacts(e:React.TouchEvent,phase:'start'|'move'|'end'){
+  if(e.touches.length>1)gestures.current.cancel();
+  for(const touch of Array.from(e.changedTouches)){
+   const point={id:touch.identifier,x:touch.clientX,y:touch.clientY,time:e.timeStamp};
+   if(phase==='start')beginContact(point,e.target);else if(phase==='move')gestures.current.move(point);else endContact(point,e.target,()=>{if(e.cancelable)e.preventDefault()});
+  }
+ }
+ useEffect(()=>()=>{cancelAnimationFrame(settleFrame.current);turnQueue.current=[]},[]);
+ useEffect(()=>{const changed=()=>{const selection=window.getSelection();if(!selection||selection.isCollapsed||!selection.anchorNode||!scroll.current?.contains(selection.anchorNode))return;gestures.current.cancel();scheduleCapture()};document.addEventListener('selectionchange',changed);return()=>document.removeEventListener('selectionchange',changed)},[book.id]);
  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){setNotesOpen(false);setControlsOpen(false);setContents(false);setSettings(false)}};document.addEventListener('keydown',close);return()=>document.removeEventListener('keydown',close)},[]);
  async function find(){if(!pdf||!search.trim())return;setSearching(true);setResults([]);try{const found:{page:number;text:string}[]=[];for(let p=1;p<=pdf.numPages;p++){const text=await(await pdf.getPage(p)).getTextContent(),value=text.items.map(i=>'str'in i?i.str:'').join(' '),index=value.toLowerCase().indexOf(search.trim().toLowerCase());if(index>=0)found.push({page:p,text:value.slice(Math.max(0,index-40),index+130)});if(found.length>=30)break;}setResults(found);if(!found.length)toast('В текстовом слое совпадений не найдено')}catch{setError('Поиск прервался. Обнови разрешение на чтение.')}finally{setSearching(false)}}
  function findFB2(){const query=search.trim().toLocaleLowerCase('ru');if(!query||!documentRef.current)return;const found:{id:string;offset:number;text:string}[]=[];for(const p of documentRef.current.querySelectorAll<HTMLElement>('[data-fb2-paragraph]')){const value=p.textContent??'',index=value.toLocaleLowerCase('ru').indexOf(query);if(index<0)continue;found.push({id:p.id,offset:index,text:value.slice(Math.max(0,index-45),index+130)});if(found.length>=30)break}setFb2Results(found);if(!found.length)toast('В текущей главе совпадений не найдено')}
  return <main className="reader page-enter cloud-reader" id="main" onKeyDown={onReaderKey}><ReaderRail title={book.title} author={book.author} location={book.format==='pdf'?`PDF ${anchor.page??1} / ${pdf?.numPages??'…'}`:chapter?.title??book.title} format={book.format.toUpperCase()} onTools={()=>setControlsOpen(true)}/><button className="cloud-reader-menu" aria-label={controlsOpen?'Скрыть меню чтения':'Открыть меню чтения'} aria-expanded={controlsOpen} onClick={()=>{setControlsOpen(v=>!v);setContents(false);setSettings(false)}}>{controlsOpen?'×':'⋯'}</button><div className={`cloud-reader-chrome ${controlsOpen?'open':''}`}><div className="reader-heading"><div className="reader-path"><button className="text-link" onClick={()=>navigate('library')}>← Библиотека</button><span className="path-slash">/</span><button className="contents-button" aria-expanded={contents} onClick={()=>setContents(!contents)}>Оглавление</button><span className="path-slash">/</span><span className="reader-source-title">{book.title}</span></div></div>
  <div className="reader-toolbar cloud-reader-toolbar"><div className="segmented reading-modes" role="group" aria-label="Режим читального зала">{(['reading','research']as const).map(m=><button key={m} aria-pressed={state.mode===m} className={state.mode===m?'active':''} onClick={()=>{update({mode:m});setControlsOpen(false)}}>{m==='reading'?'Чтение':'Исследование'}</button>)}</div><div className="segmented cloud-layout-switch" role="group" aria-label="Способ чтения"><button aria-pressed={layout==='scroll'} className={layout==='scroll'?'active':''} onClick={()=>changeLayout('scroll')}>Прокрутка</button><button aria-pressed={layout==='pages'} className={layout==='pages'?'active':''} onClick={()=>changeLayout('pages')}>Страницы</button></div><div className="reader-controls"><button className="text-button" aria-expanded={settings} onClick={()=>setSettings(!settings)}>Аа Вид текста</button><button className="text-button" onClick={()=>void bookmark(current.current).catch(e=>setError(e.message))}>+ Закладка</button><button className="text-button" onClick={()=>setNotesOpen(true)}>Заметки ({notes.length})</button><button className="text-button" onClick={note}>+ Заметка</button><button className="text-button" onClick={()=>{setControlsOpen(false);setWilkins(true)}}>Вилкинс</button></div></div>
- {settings&&<div className="cloud-reader-settings">{book.format==='pdf'?<label>Масштаб<select value={zoom} onChange={e=>setZoom(Number(e.target.value))}>{[0.7,1,1.3,1.6,2,2.5].map(n=><option key={n} value={n}>{Math.round(n*100)}%</option>)}</select></label>:<><label>Шрифт<select value={state.readerFont??'serif'} onChange={e=>changeTypography(()=>update({readerFont:e.target.value as 'serif'|'sans'}))}><option value="serif">Literata</option><option value="sans">Onest</option></select></label><label>Размер<input type="range" min={16} max={26} value={state.fontSize} onChange={e=>changeTypography(()=>update({fontSize:Number(e.target.value)}))}/></label><label>Интервал<select value={state.lineHeight} onChange={e=>changeTypography(()=>update({lineHeight:Number(e.target.value)}))}>{[1.5,1.8,2.1].map(n=><option key={n} value={n}>{n}</option>)}</select></label><label><input type="checkbox" checked={state.wide} onChange={e=>changeTypography(()=>update({wide:e.target.checked}))}/>Шире текстовая полоса</label></>}</div>}
+ {settings&&<div className="cloud-reader-settings">{book.format==='pdf'?<label>Масштаб<select value={zoom} onChange={e=>setZoom(Number(e.target.value))}>{[0.7,1,1.3,1.6,2,2.5].map(n=><option key={n} value={n}>{Math.round(n*100)}%</option>)}</select></label>:<><label>Шрифт<select value={state.readerFont??'serif'} onChange={e=>changeTypography(()=>update({readerFont:e.target.value as 'serif'|'sans'}))}><option value="serif">Literata</option><option value="sans">IBM Plex Sans</option></select></label><label>Размер<input type="range" min={16} max={26} value={state.fontSize} onChange={e=>changeTypography(()=>update({fontSize:Number(e.target.value)}))}/></label><label>Интервал<select value={state.lineHeight} onChange={e=>changeTypography(()=>update({lineHeight:Number(e.target.value)}))}>{[1.5,1.8,2.1].map(n=><option key={n} value={n}>{n}</option>)}</select></label><label><input type="checkbox" checked={state.wide} onChange={e=>changeTypography(()=>update({wide:e.target.checked}))}/>Шире текстовая полоса</label></>}</div>}
  {contents&&<div className="contents-drawer"><button className="icon-button" aria-label="Закрыть содержание" onClick={()=>setContents(false)}>×</button>{book.format==='pdf'?<label>Страница PDF<input type="number" min={1} max={pdf?.numPages??1} value={anchor.page??1} onChange={e=>{const page=Number(e.target.value);if(pdf&&page>=1&&page<=pdf.numPages)move({format:'pdf',page})}}/></label>:fb2?.toc.map(t=><button key={t.id} onClick={()=>{move({format:'fb2',chapter:t.chapter,paragraph:t.id});setContents(false)}}>{t.title}</button>)}<h3>Закладки</h3>{bookmarks.map(b=><button key={b.entity_id} onClick={()=>{move(b.data.anchor);setContents(false)}}>{b.data.title}</button>)}</div>}
  <form className="cloud-pdf-search" onSubmit={e=>{e.preventDefault();book.format==='pdf'?void find():findFB2()}}><input aria-label={book.format==='pdf'?'Поиск по тексту PDF':'Поиск в текущей главе FB2'} value={search} onChange={e=>setSearch(e.target.value)} placeholder={book.format==='pdf'?'Поиск по текстовому слою':'Поиск в текущей главе'}/><button className="text-button" disabled={loading||searching||!search.trim()}>{searching?'Поиск…':'Найти'}</button>{book.format==='pdf'?results.map(r=><button type="button" className="small-link" key={r.page} onClick={()=>{move({format:'pdf',page:r.page});setControlsOpen(false)}}>PDF {r.page}: {r.text}</button>):fb2Results.map(r=><button type="button" className="small-link" key={r.id} onClick={()=>{move({format:'fb2',chapter:chapter?.id,paragraph:r.id,offset:r.offset});setControlsOpen(false)}}>{r.text}</button>)}</form>
  </div>
  {error&&<div role="alert" className="form-note">{error}<button className="small-link" onClick={()=>setReload(v=>v+1)}>Обновить разрешение на чтение</button></div>}{loading&&<p className="cloud-loading" role="status">Открываю книгу из приватного хранилища…</p>}
- <div className={`reader-workspace mode-${state.mode==='reading'?'reading':'research'}`}><div className={`reader-scroll cloud-book-scroll cloud-layout-${layout} cloud-format-${book.format}`} ref={scroll} onScroll={onScroll} onMouseUp={scheduleCapture} onTouchStart={e=>{const t=e.touches[0];touchStart.current=e.touches.length===1&&t?{x:t.clientX,y:t.clientY,time:Date.now()}:null}} onTouchEnd={onReaderTouchEnd} onKeyUp={e=>{if(e.shiftKey)scheduleCapture()}} tabIndex={0} aria-label={`Текст книги ${book.title}`}>
+ <div className={`reader-workspace mode-${state.mode==='reading'?'reading':'research'}`}><div className={`reader-scroll cloud-book-scroll cloud-layout-${layout} cloud-format-${book.format} ${book.format==='pdf'&&zoom>1?'cloud-pdf-zoomed':''}`} ref={scroll} onScroll={onScroll} onMouseUp={scheduleCapture}
+ onPointerDown={supportsPointer?e=>{if(e.button!==0)return;beginContact(pointerPoint(e),e.target)}:undefined}
+ onPointerMove={supportsPointer?e=>gestures.current.move(pointerPoint(e)):undefined}
+ onPointerUp={supportsPointer?e=>endContact(pointerPoint(e),e.target,()=>e.preventDefault()):undefined}
+ onPointerCancel={supportsPointer?e=>gestures.current.cancel(e.pointerId):undefined}
+ onTouchStart={!supportsPointer?e=>touchContacts(e,'start'):undefined}
+ onTouchMove={!supportsPointer?e=>touchContacts(e,'move'):undefined}
+ onTouchEnd={!supportsPointer?e=>touchContacts(e,'end'):undefined}
+ onTouchCancel={!supportsPointer?e=>{for(const t of Array.from(e.changedTouches))gestures.current.cancel(t.identifier)}:undefined}
+ onContextMenu={()=>gestures.current.cancel()}
+ onClickCapture={e=>{if(ghostClick.current&&e.detail!==0){ghostClick.current=false;e.preventDefault();e.stopPropagation()}}} onKeyUp={e=>{if(e.shiftKey)scheduleCapture()}} tabIndex={0} aria-label={`Текст книги ${book.title}`}>
  {book.format==='pdf'?(layout==='scroll'?<div className="cloud-pdf-continuous">{pdf&&Array.from({length:pdf.numPages},(_,index)=><PDFScrollPage key={index+1} pdf={pdf} pageNumber={index+1} width={pageWidth} zoom={zoom} scrollRoot={scroll} notes={notes.filter(n=>n.fileAnchor?.page===index+1)} onNote={openAnnotation}/>)}</div>:<><div className="cloud-pdf-page" ref={documentRef} data-page={visiblePage}><canvas ref={canvas}/><div className="textLayer" ref={textLayer}/>{notes.filter(n=>n.fileAnchor?.page===visiblePage).flatMap(n=>(n.fileAnchor?.rects??[]).map((r,i)=><span key={`${n.id}-${i}`} aria-hidden="true" className="cloud-pdf-highlight" style={{left:`${r[0]*100}%`,top:`${r[1]*100}%`,width:`${r[2]*100}%`,height:`${r[3]*100}%`}}/>))}{notes.filter(n=>n.fileAnchor?.page===visiblePage&&n.fileAnchor?.rects?.length).map(n=><button key={n.id} className="cloud-pdf-note-marker" style={{top:`${n.fileAnchor!.rects![0][1]*100}%`}} onClick={()=>openAnnotation(n)} aria-label={`Открыть заметку: ${n.title}`}>●</button>)}</div>{!loading&&!hasText&&<p className="fineprint">На этой странице текстовый слой отсутствует. Доступны чтение скана, закладки и заметки к странице.</p>}</>):<div ref={documentRef} className={`document fb2-document ${state.wide?'wide-text':''} ${layout==='pages'?'paged-text':''}`} style={{'--reader-size':`${state.fontSize}px`,'--reader-leading':state.lineHeight,'--page-width':`${pageWidth}px`,fontFamily:state.readerFont==='sans'?'var(--reader-sans,var(--sans))':'var(--reader-serif,var(--serif))'} as CSSProperties} onClick={e=>{const mark=(e.target as Element).closest<HTMLElement>('mark[data-cloud-highlight]');if(mark&&!window.getSelection()?.toString()){const found=notes.find(n=>n.id===mark.dataset.cloudHighlight);if(found)openAnnotation(found);return}const link=(e.target as Element).closest('a');if(link?.getAttribute('href')?.startsWith('#')){e.preventDefault();const id=link.getAttribute('href')!.slice(1),chapter=fb2?.targets[id];if(chapter)move({format:'fb2',chapter,paragraph:id})}}} dangerouslySetInnerHTML={{__html:chapter?.html??''}}/>}
  </div>{state.mode!=='reading'&&<aside className="context-panel"><div className="context-top"><span className="eyebrow">На полях · {notes.length} записей</span></div><div className="context-scroll"><NoteList notes={notes}/></div><div className="context-foot">{c.status||'Личная библиотека'}</div></aside>}{layout==='pages'&&<><button className="cloud-page-turn previous" aria-label="Предыдущая страница" disabled={book.format==='pdf'?!pdf||(anchor.page??1)<=1:!fb2||fb2Page<=1&&fb2.chapters[0]?.id===chapter?.id} onClick={()=>book.format==='pdf'?pdfTurn(-1):fb2Turn(-1)}/><button className="cloud-page-turn next" aria-label="Следующая страница" disabled={book.format==='pdf'?!pdf||(anchor.page??1)>=pdf.numPages:!fb2||fb2Page>=fb2Pages&&fb2.chapters.at(-1)?.id===chapter?.id} onClick={()=>book.format==='pdf'?pdfTurn(1):fb2Turn(1)}/></>}</div>
  <div className={`document-navigation cloud-navigation ${controlsOpen?'controls-open':''} ${layout==='scroll'&&atEnd?'at-end':''}`}>{book.format==='pdf'?<><button className="text-link" disabled={!pdf||(anchor.page??1)<=1} onClick={()=>move({format:'pdf',page:(anchor.page??1)-1})}>← Назад</button><span>PDF {anchor.page??1} / {pdf?.numPages??'…'}</span><button className="text-link" disabled={!pdf||(anchor.page??1)>=pdf.numPages} onClick={()=>move({format:'pdf',page:(anchor.page??1)+1})}>Вперед →</button></>:layout==='pages'?<><button className="text-link" disabled={!fb2||fb2Page<=1&&fb2.chapters[0]?.id===chapter?.id} onClick={()=>fb2Turn(-1)}>← Назад</button><span>{fb2Page} / {fb2Pages} · {chapter?.title}</span><button className="text-link" disabled={!fb2||fb2Page>=fb2Pages&&fb2.chapters.at(-1)?.id===chapter?.id} onClick={()=>fb2Turn(1)}>Вперед →</button></>:<><button className="text-link" disabled={!fb2||fb2.chapters.findIndex(ch=>ch.id===chapter?.id)<=0} onClick={()=>{const i=fb2!.chapters.findIndex(ch=>ch.id===chapter?.id);move({format:'fb2',chapter:fb2!.chapters[i-1].id})}}>← Предыдущая глава</button><span>{chapter?.title}</span><button className="text-link" disabled={!fb2||fb2.chapters.findIndex(ch=>ch.id===chapter?.id)>=fb2.chapters.length-1} onClick={()=>{const i=fb2!.chapters.findIndex(ch=>ch.id===chapter?.id);move({format:'fb2',chapter:fb2!.chapters[i+1].id})}}>Следующая глава →</button></>}</div>

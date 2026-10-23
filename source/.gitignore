@@ -11,3 +11,6 @@ ANTONOVIUM.html
 
 .cloud_manifest.json
 .edge-check-*/
+
+tests/.baseline/
+tests/browser-results/

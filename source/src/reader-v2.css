@@ -52,7 +52,7 @@
 .reader-rail-source{min-height:0;padding-top:42px}
 .reader-rail-kicker,.reader-rail-location>span{
   display:block;color:var(--shell-muted,#aeb8c8);
-  font:600 11px/1.4 var(--reader-sans);letter-spacing:.09em
+  font:500 13px/1.4 var(--reader-sans);letter-spacing:0
 }
 .reader-rail-rule{display:block;width:42px;height:2px;margin:24px 0 21px;background:var(--accent,#f47964)}
 .reader-rail-source strong{
@@ -62,7 +62,7 @@
 .reader-rail-source p{margin-top:15px;color:var(--shell-muted,#aeb8c8);font:450 12px/1.5 var(--reader-sans)}
 .reader-rail-format{
   display:inline-block;margin-top:21px;padding:6px 8px;border:1px solid var(--shell-line,#ffffff2b);
-  color:var(--shell-muted,#aeb8c8);font:600 11px/1 var(--reader-sans);letter-spacing:.08em
+  color:var(--shell-muted,#aeb8c8);font:600 11px/1 var(--reader-sans);letter-spacing:.01em
 }
 .reader-rail-spacer{flex:1;min-height:24px}
 .reader-rail-location{padding-bottom:21px;border-bottom:1px solid var(--shell-line,#ffffff2b)}
@@ -302,14 +302,16 @@
 .fb2-document table{display:block;width:100%;max-width:100%;overflow-x:auto;border-collapse:collapse}
 .fb2-document td,.fb2-document th{padding:8px;border:1px solid var(--line)}
 .cloud-book-scroll.cloud-format-fb2.cloud-layout-pages{
-  width:min(100%,860px);margin-inline:auto;padding:0;overflow-x:auto;overflow-y:hidden;
+  width:min(100%,860px);margin-inline:auto;padding:0;overflow-x:hidden;overflow-y:hidden;touch-action:pan-y pinch-zoom;
   scrollbar-width:none;scroll-behavior:auto;overscroll-behavior-x:contain
 }
+.cloud-book-scroll.cloud-format-pdf.cloud-layout-pages{touch-action:pan-y pinch-zoom}
+.cloud-book-scroll.cloud-format-pdf.cloud-layout-pages.cloud-pdf-zoomed{touch-action:auto}
 .cloud-book-scroll.cloud-layout-pages::-webkit-scrollbar{display:none}
 .fb2-document.paged-text,.fb2-document.wide-text.paged-text{
   width:100%;max-width:none;height:100%;min-height:0;margin:0;
   padding:38px 24px 36px;border:0;box-shadow:none;
-  column-width:var(--page-width);column-gap:48px;column-fill:auto;overflow:visible
+  column-width:auto;column-count:1;column-gap:48px;column-fill:auto;overflow:visible
 }
 .fb2-document.paged-text :is(h2,h3,h4){break-after:avoid-column}
 .fb2-document.paged-text :is(img,blockquote){break-inside:avoid-column;max-height:max(120px,calc(100dvh - 190px))}
@@ -344,13 +346,16 @@
 .cloud-navigation .text-link{min-height:42px;font-size:12px}
 .cloud-navigation>span{min-width:0;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cloud-page-turn{
-  position:absolute;z-index:5;top:52px;bottom:58px;width:clamp(24px,4vw,54px);
-  background:transparent;opacity:0;touch-action:manipulation
+  position:absolute;z-index:5;bottom:64px;width:44px;height:44px;
+  background:var(--paper);border:1px solid var(--line);border-radius:50%;opacity:.78;touch-action:manipulation;
+  font:400 23px/1 var(--ui);color:var(--primary)
 }
-.cloud-page-turn.previous{left:216px}
-.cloud-page-turn.next{right:0}
+.cloud-page-turn.previous{left:calc(216px + 12px)}
+.cloud-page-turn.previous:before{content:"←"}
+.cloud-page-turn.next{right:12px}
+.cloud-page-turn.next:before{content:"→"}
 .cloud-page-turn:focus-visible{opacity:.55;background:var(--wash);outline:2px solid var(--primary);outline-offset:-2px}
-.cloud-page-turn:disabled{pointer-events:none}
+.cloud-page-turn:disabled{opacity:.25;cursor:default}
 .cloud-notes-overlay{position:fixed;z-index:35;inset:0;display:flex;justify-content:flex-end;background:#0007}
 .cloud-notes-drawer{
   display:flex;flex-direction:column;gap:16px;width:min(480px,100%);height:100%;
@@ -461,7 +466,8 @@
   .cloud-book-scroll.cloud-format-pdf{padding:8px 8px calc(26px + env(safe-area-inset-bottom))}
   .cloud-pdf-continuous{gap:14px}
   .cloud-pdf-page{box-shadow:0 3px 13px #17203319}
-  .cloud-page-turn{top:54px;bottom:54px;width:24px;pointer-events:none}
+  .cloud-page-turn{top:auto;bottom:58px;width:44px;height:44px;visibility:hidden;pointer-events:auto}
+  .cloud-reader:has(.cloud-reader-chrome.open) .cloud-page-turn{visibility:visible}
   .cloud-navigation{padding:6px 14px max(8px,env(safe-area-inset-bottom));min-height:50px}
   .cloud-navigation>span{max-width:36%}
   .cloud-selection{
