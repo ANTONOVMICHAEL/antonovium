@@ -86,7 +86,7 @@ button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid 
  .shell-mobile-tabs>button.is-current{color:var(--primary);background:var(--wash)}
  .shell-mobile-tabs>button:active{transform:scale(.95)}
  .shell-mobile-scrim{position:fixed;z-index:34;inset:0;display:block;width:100%;background:#20283463;cursor:default}
- .shell-mobile-sheet{position:fixed;z-index:36;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));display:block;max-width:520px;margin-inline:auto;padding:18px;background:var(--paper);border:1px solid var(--line);border-radius:18px;box-shadow:0 28px 75px #1d273747;animation:shell-rise .22s ease-out}
+ .shell-mobile-sheet{position:fixed;z-index:36;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));display:block;max-width:520px;max-height:calc(100dvh - 88px - env(safe-area-inset-bottom));overflow-y:auto;overscroll-behavior:contain;margin-inline:auto;padding:18px;background:var(--paper);border:1px solid var(--line);border-radius:18px;box-shadow:0 28px 75px #1d273747;animation:shell-rise .22s ease-out}
  .shell-sheet-heading{display:flex;align-items:center;justify-content:space-between;padding:1px 3px 14px;font:650 19px/1.3 var(--ui)}
  .shell-sheet-heading button{width:32px;height:32px;border-radius:8px;color:var(--muted);font-size:24px;line-height:1}
  .shell-sheet-heading button:hover{background:var(--wash)}
@@ -104,7 +104,7 @@ button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid 
  .page-heading>h1{font-size:clamp(28px,5vw,38px)}
  .app-footer{display:none}
  .toast{bottom:calc(76px + env(safe-area-inset-bottom))}
- .reader-application:not(.cloud-reading){height:calc(100dvh - 66px - env(safe-area-inset-bottom))}
+ .reader-application:not(.cloud-reading){height:100dvh}
  .is-quiet.reader-application:not(.cloud-reading){height:100dvh}
  .reader-application .app-header{flex-shrink:0}
 }

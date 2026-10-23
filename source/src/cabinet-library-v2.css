@@ -129,7 +129,7 @@
  .cabinet-v3-inquiry,.cabinet-v3-note{min-height:0}
  .cabinet-v3-note{padding:18px 22px 25px}
  .cabinet-v3-manuscript{grid-template-columns:105px minmax(0,1fr) 40px}
- .library-v3-body{grid-template-columns:1fr;gap:20px}
+ .library-v3-body{grid-template-columns:minmax(0,1fr);gap:20px}
  .library-v3-index{position:static;border-top:0;padding:0}
  .library-v3-index-label,.library-v3-index p{display:none}
  .library-v3-index>div{flex-direction:row;gap:20px;overflow-x:auto;scrollbar-width:none;margin:0;border:0}

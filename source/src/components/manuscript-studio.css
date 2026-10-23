@@ -53,8 +53,8 @@
 @media(max-width:1180px){.ms-command-group{gap:10px;padding:9px 16px}.ms-command-group>span{display:none}.ms-workspace.has-context{grid-template-columns:minmax(0,1fr) minmax(270px,310px)}}
 @media(max-width:899px){
  .ms-intro{grid-template-columns:1fr;padding:12px 0 24px;gap:16px}.ms-intro-copy h1{font-size:clamp(38px,6vw,53px);margin:11px 0}.ms-intro-aside{border:0;padding:0;flex-direction:row;flex-wrap:wrap;gap:7px 18px}
- .ms-commandbar{margin-bottom:14px;justify-content:space-between}.ms-workspace.has-context{display:block}.ms-context-scrim{display:block;position:fixed;inset:0;z-index:19;background:rgba(12,22,35,.42)}
- .ms-context{position:fixed;z-index:20;inset:auto 0 0;width:100%;height:min(82dvh,760px);min-height:0;border:0;border-top:1px solid var(--line);box-shadow:0 -20px 70px rgba(10,20,37,.19);padding-bottom:env(safe-area-inset-bottom)}
+ .ms-commandbar{margin-bottom:14px;justify-content:space-between}.ms-workspace.has-context{display:block}.ms-context-scrim{display:block;position:fixed;inset:0;z-index:37;background:rgba(12,22,35,.42)}
+ .ms-context{position:fixed;z-index:38;inset:auto 0 0;width:100%;height:min(82dvh,760px);min-height:0;border:0;border-top:1px solid var(--line);box-shadow:0 -20px 70px rgba(10,20,37,.19);padding-bottom:env(safe-area-inset-bottom)}
  .ms-context-head{padding:20px 22px 14px}.ms-context-scroll{padding:0 22px 22px}.ms-tabs{padding:0 22px}
  .ms-document-inner{width:min(100%,var(--ms-column-width))}
 }
