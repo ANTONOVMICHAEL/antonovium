@@ -1,0 +1,510 @@
+{
+  "environment": "Chromium, real iframe layout; synthetic PointerEvent/TouchEvent gestures; no physical iOS or WebKit",
+  "checks": [
+    {
+      "width": 360,
+      "name": "fb2: 20 single forward taps, pointer + touch + compatibility click",
+      "pass": true
+    },
+    {
+      "width": 360,
+      "name": "fb2: 20 single backward taps",
+      "pass": true
+    },
+    {
+      "width": 360,
+      "name": "fb2: first page, center, swipe and cancelled gestures",
+      "pass": true
+    },
+    {
+      "width": 360,
+      "name": "fb2: keyboard and accessible page buttons",
+      "pass": true
+    },
+    {
+      "width": 360,
+      "name": "fb2: selection, highlight, annotation and bookmark",
+      "pass": true
+    },
+    {
+      "width": 360,
+      "name": "fb2: footnote, chapter boundaries and last page",
+      "pass": true
+    },
+    {
+      "width": 360,
+      "name": "fb2: text anchor survives font, viewport, image reflow and reopen",
+      "pass": true
+    },
+    {
+      "width": 360,
+      "name": "fb2: 20 rapid taps retain exactly 20 transitions",
+      "pass": true
+    },
+    {
+      "width": 360,
+      "name": "fb2: scroll mode remains scrollable",
+      "pass": true
+    },
+    {
+      "width": 360,
+      "name": "pdf: 20 single forward taps, pointer + touch + compatibility click",
+      "pass": true
+    },
+    {
+      "width": 360,
+      "name": "pdf: 20 single backward taps",
+      "pass": true
+    },
+    {
+      "width": 360,
+      "name": "pdf: first page, center, swipe and cancelled gestures",
+      "pass": true
+    },
+    {
+      "width": 360,
+      "name": "pdf: keyboard and accessible page buttons",
+      "pass": true
+    },
+    {
+      "width": 360,
+      "name": "pdf: selection, highlight, annotation and bookmark",
+      "pass": true
+    },
+    {
+      "width": 360,
+      "name": "pdf: zoom/pinch protection, final page and restore",
+      "pass": true
+    },
+    {
+      "width": 360,
+      "name": "pdf: 20 rapid taps retain exactly 20 transitions",
+      "pass": true
+    },
+    {
+      "width": 360,
+      "name": "pdf: scroll mode remains scrollable",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "fb2: 20 single forward taps, pointer + touch + compatibility click",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "fb2: 20 single backward taps",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "fb2: first page, center, swipe and cancelled gestures",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "fb2: keyboard and accessible page buttons",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "fb2: selection, highlight, annotation and bookmark",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "fb2: footnote, chapter boundaries and last page",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "fb2: text anchor survives font, viewport, image reflow and reopen",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "fb2: 20 rapid taps retain exactly 20 transitions",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "fb2: scroll mode remains scrollable",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "pdf: 20 single forward taps, pointer + touch + compatibility click",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "pdf: 20 single backward taps",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "pdf: first page, center, swipe and cancelled gestures",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "pdf: keyboard and accessible page buttons",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "pdf: selection, highlight, annotation and bookmark",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "pdf: zoom/pinch protection, final page and restore",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "pdf: 20 rapid taps retain exactly 20 transitions",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "pdf: scroll mode remains scrollable",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "Typography/layout: cabinet",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "Typography/layout: library",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "Typography/layout: reader-fb2",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "Typography/layout: desk",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "Typography/layout: atlas",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "Typography/layout: lab",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "Typography/layout: manuscripts",
+      "pass": true
+    },
+    {
+      "width": 390,
+      "name": "Typography/layout: wilkins",
+      "pass": true
+    },
+    {
+      "width": 430,
+      "name": "fb2: 20 single forward taps, pointer + touch + compatibility click",
+      "pass": true
+    },
+    {
+      "width": 430,
+      "name": "fb2: 20 single backward taps",
+      "pass": true
+    },
+    {
+      "width": 430,
+      "name": "fb2: first page, center, swipe and cancelled gestures",
+      "pass": true
+    },
+    {
+      "width": 430,
+      "name": "fb2: keyboard and accessible page buttons",
+      "pass": true
+    },
+    {
+      "width": 430,
+      "name": "fb2: selection, highlight, annotation and bookmark",
+      "pass": true
+    },
+    {
+      "width": 430,
+      "name": "fb2: footnote, chapter boundaries and last page",
+      "pass": true
+    },
+    {
+      "width": 430,
+      "name": "fb2: text anchor survives font, viewport, image reflow and reopen",
+      "pass": true
+    },
+    {
+      "width": 430,
+      "name": "fb2: 20 rapid taps retain exactly 20 transitions",
+      "pass": true
+    },
+    {
+      "width": 430,
+      "name": "fb2: scroll mode remains scrollable",
+      "pass": true
+    },
+    {
+      "width": 430,
+      "name": "pdf: 20 single forward taps, pointer + touch + compatibility click",
+      "pass": true
+    },
+    {
+      "width": 430,
+      "name": "pdf: 20 single backward taps",
+      "pass": true
+    },
+    {
+      "width": 430,
+      "name": "pdf: first page, center, swipe and cancelled gestures",
+      "pass": true
+    },
+    {
+      "width": 430,
+      "name": "pdf: keyboard and accessible page buttons",
+      "pass": true
+    },
+    {
+      "width": 430,
+      "name": "pdf: selection, highlight, annotation and bookmark",
+      "pass": true
+    },
+    {
+      "width": 430,
+      "name": "pdf: zoom/pinch protection, final page and restore",
+      "pass": true
+    },
+    {
+      "width": 430,
+      "name": "pdf: 20 rapid taps retain exactly 20 transitions",
+      "pass": true
+    },
+    {
+      "width": 430,
+      "name": "pdf: scroll mode remains scrollable",
+      "pass": true
+    },
+    {
+      "width": 768,
+      "name": "fb2: 20 single forward taps, pointer + touch + compatibility click",
+      "pass": true
+    },
+    {
+      "width": 768,
+      "name": "fb2: 20 single backward taps",
+      "pass": true
+    },
+    {
+      "width": 768,
+      "name": "fb2: first page, center, swipe and cancelled gestures",
+      "pass": true
+    },
+    {
+      "width": 768,
+      "name": "fb2: keyboard and accessible page buttons",
+      "pass": true
+    },
+    {
+      "width": 768,
+      "name": "fb2: selection, highlight, annotation and bookmark",
+      "pass": true
+    },
+    {
+      "width": 768,
+      "name": "fb2: footnote, chapter boundaries and last page",
+      "pass": true
+    },
+    {
+      "width": 768,
+      "name": "fb2: text anchor survives font, viewport, image reflow and reopen",
+      "pass": true
+    },
+    {
+      "width": 768,
+      "name": "fb2: 20 rapid taps retain exactly 20 transitions",
+      "pass": true
+    },
+    {
+      "width": 768,
+      "name": "fb2: scroll mode remains scrollable",
+      "pass": true
+    },
+    {
+      "width": 768,
+      "name": "pdf: 20 single forward taps, pointer + touch + compatibility click",
+      "pass": true
+    },
+    {
+      "width": 768,
+      "name": "pdf: 20 single backward taps",
+      "pass": true
+    },
+    {
+      "width": 768,
+      "name": "pdf: first page, center, swipe and cancelled gestures",
+      "pass": true
+    },
+    {
+      "width": 768,
+      "name": "pdf: keyboard and accessible page buttons",
+      "pass": true
+    },
+    {
+      "width": 768,
+      "name": "pdf: selection, highlight, annotation and bookmark",
+      "pass": true
+    },
+    {
+      "width": 768,
+      "name": "pdf: zoom/pinch protection, final page and restore",
+      "pass": true
+    },
+    {
+      "width": 768,
+      "name": "pdf: 20 rapid taps retain exactly 20 transitions",
+      "pass": true
+    },
+    {
+      "width": 768,
+      "name": "pdf: scroll mode remains scrollable",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "fb2: 20 single forward taps, pointer + touch + compatibility click",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "fb2: 20 single backward taps",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "fb2: first page, center, swipe and cancelled gestures",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "fb2: keyboard and accessible page buttons",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "fb2: selection, highlight, annotation and bookmark",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "fb2: footnote, chapter boundaries and last page",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "fb2: text anchor survives font, viewport, image reflow and reopen",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "fb2: 20 rapid taps retain exactly 20 transitions",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "fb2: scroll mode remains scrollable",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "pdf: 20 single forward taps, pointer + touch + compatibility click",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "pdf: 20 single backward taps",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "pdf: first page, center, swipe and cancelled gestures",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "pdf: keyboard and accessible page buttons",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "pdf: selection, highlight, annotation and bookmark",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "pdf: zoom/pinch protection, final page and restore",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "pdf: 20 rapid taps retain exactly 20 transitions",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "pdf: scroll mode remains scrollable",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "Typography/layout: cabinet",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "Typography/layout: library",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "Typography/layout: reader-fb2",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "Typography/layout: desk",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "Typography/layout: atlas",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "Typography/layout: lab",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "Typography/layout: manuscripts",
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "name": "Typography/layout: wilkins",
+      "pass": true
+    }
+  ]
+}

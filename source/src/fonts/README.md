@@ -11,3 +11,5 @@ Local variable WOFF2 fonts from the official Google Fonts repository, downloaded
 Manrope, IBM Plex Sans, Inter and the previous Onest were compared in Chromium using identical Russian headings, labels, prose, Cyrillic letterforms and numbers. IBM Plex Sans was selected for compact interface text, Manrope for the larger hierarchy, Literata for continuous reading. This is a visual design judgment, not a performance benchmark.
 
 Full Russian character coverage (including both forms of е/ё, quotation marks and punctuation) was checked in each cmap. The original variable TTFs were converted to WOFF2 using fontTools. No external font request is made at runtime. PDF typography is unchanged.
+
+The previous Onest and Unbounded license notices are retained for older hashed font assets kept available to existing browser tabs. These families are no longer used by the current interface.
