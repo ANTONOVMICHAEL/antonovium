@@ -63,11 +63,16 @@
     await waitFor(()=>document.querySelector('.app-header'));
     if(screen==='cabinet')return;
     if(screen==='reader'){
-      const action=await waitFor(()=>[...document.querySelectorAll('main button')].find(b=>/Продолжить (чтение|работу|источник)|Открыть книгу|Читать дальше/i.test(b.textContent)));
+      const action=await waitFor(()=>[...document.querySelectorAll('main button')].find(b=>/Продолжить (чтение|работу|источник)|Вернуться к источнику|Открыть книгу|Читать дальше/i.test(b.textContent)));
       action.click();
       await waitFor(()=>document.querySelector('.reader'));
     }else{
-      const nav=await waitFor(()=>[...document.querySelectorAll('nav button')].find(b=>b.textContent.trim().endsWith(labels[screen])));
+      let nav=[...document.querySelectorAll('nav button')].find(b=>b.textContent.trim().endsWith(labels[screen]));
+      if(!nav){
+        const more=[...document.querySelectorAll('nav button')].find(b=>b.textContent.trim().startsWith('Еще'));
+        more?.click();
+        nav=await waitFor(()=>[...document.querySelectorAll('.app-header button')].find(b=>b.textContent.trim().endsWith(labels[screen])));
+      }
       nav.click();
       const titles={library:'Библиотека',desk:'Исследовательский стол',atlas:'Атлас',lab:'Лаборатория',manuscripts:'Рукописи'};
       await waitFor(()=>document.title.endsWith(titles[screen]));
