@@ -1,28 +1,76 @@
 import { useApp } from '../context';
+import { useCloud } from '../cloud';
+import { useLocalBooks, localProgress } from '../localBooks';
+import type { Screen } from '../types';
 import { Arrow, Label } from './UI';
-import NoteList from './NoteList';
-import {CloudUploadButton} from './CloudBooks';
-import {useCloud} from '../cloud';
-import {useLocalBooks} from '../localBooks';
-export default function Cabinet(){
- const{state,update,openSource,navigate,openResearch,composeNote,openCategory}=useApp();
- const cloud=useCloud(),local=useLocalBooks(),book=cloud.books.find(b=>b.id===state.sourceId)??local.books.find(b=>b.id===state.sourceId);
- const source=book?{id:book.id,title:book.title,author:book.author,format:'digital' as const,demo:false,sections:[]}:state.sources.find(s=>s.id===state.sourceId)??state.sources[0];
- const section=source?.sections.find(s=>s.id===state.sectionId)??source?.sections[0];
- const number=String((source?.sections.findIndex(s=>s.id===section?.id)??0)+1).padStart(2,'0');
- const date=new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'long',weekday:'long',timeZone:'Europe/Saratov'}).format(new Date());
- return <main className="page cabinet page-enter" id="main"><div className="page-topline"><Label>Личное исследовательское пространство</Label><span>{date}</span></div>
- <div className="page-heading"><h1>Научный <em>кабинет</em><span className="title-period">.</span></h1><div className="cloud-library-actions"><CloudUploadButton/><button className="button outline" onClick={()=>composeNote()}>Записать мысль <span>+</span></button></div></div>
- <div className="cabinet-lead"><section className="reading-feature" aria-label="Продолжить чтение"><div className="feature-top"><Label>{source?.format==='paper'?'Бумажное чтение':'На полях чтения'}</Label><span className="feature-index">SOURCE / {number}</span></div>
- <div className="reading-feature-content"><div className="feature-kicker">{source?.demo?'Демонстрационный источник':source?.author??'Моя библиотека'}</div><h2>{source?.title??'Место для первого источника'}</h2><p>{section?.title??'Заметки по своему изданию'}</p></div>
- <div className="feature-excerpt"><span className="excerpt-bracket">[</span><p>{section?.paragraphs[1]?.text.slice(0,169)??'Запиши мысль по книге и укажи страницу. Все заметки останутся связаны с конкретным источником.'}{section?.paragraphs[1]?'…':''}</p><span className="excerpt-bracket">]</span></div>
- <div className="feature-bottom"><button className="button light" onClick={()=>source&&openSource(source.id)}>Продолжить {source?.format==='paper'?'работу':'чтение'} <Arrow/></button><span>{source?.format==='digital'?`Раздел ${number} · позиция сохранена`:'Рядом с бумажной книгой'}</span></div>
- </section>
- <section className="research-index"><div className="section-head"><Label>Исследовательские линии</Label><button className="text-link" onClick={()=>navigate('lab')}>Все линии <Arrow diagonal/></button></div>
- {state.research.filter(r=>!r.archived).slice(0,2).map((r,i)=><button className="research-line" key={r.id} onClick={()=>openResearch(r.id)}><span className="research-number">0{i+1}</span><div><span className="research-state">{r.demo?'Демонстрационная линия':'В работе'}</span><h2>{r.title}</h2><p>{r.question}</p></div><Arrow diagonal/></button>)}
- <button className="index-action" onClick={()=>navigate('lab')}><span>От вопроса - к исследованию</span><Arrow/></button></section></div>
- <div className="cabinet-bottom"><section className="recent-notes"><div className="section-head"><Label>Последние заметки</Label><button className="text-link" onClick={()=>{update({mode:'research'});navigate('reader');}}>Открыть поля <Arrow diagonal/></button></div><NoteList notes={[...state.notes].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,2)} compact/></section>
- <section className="atlas-preview"><div className="section-head"><Label>Атлас гражданского права</Label><button className="text-link" onClick={()=>navigate('atlas')} aria-label="Открыть атлас"><Arrow diagonal/></button></div><div className="mini-atlas"><svg viewBox="0 0 360 185" aria-hidden="true"><path d="M180 32V84M180 84L75 143M180 84L288 143"/><circle cx="180" cy="84" r="4"/></svg><button className="mini-node node-one" onClick={()=>openCategory('goodfaith')}>Добросовестность</button><button className="mini-node node-two" onClick={()=>openCategory('badfaith')}>Недобросовестность</button><button className="mini-node node-three" onClick={()=>openCategory('abuse')}>Злоупотребление</button><button className="mini-node node-four" onClick={()=>openCategory('fault')}>Вина</button></div><p className="fineprint">Связи как направления поиска</p></section>
- <section className="manuscript-preview"><div className="section-head"><Label>На письменном столе</Label><span className="micro-index">MS / 01</span></div><div><span className="draft-state">Рабочая рукопись</span><h2>{state.manuscriptTitle}</h2><p>Собственные тезисы, фрагменты и проверенные основания.</p></div><button className="text-link strong" onClick={()=>navigate('manuscripts')}>К рукописи <Arrow/></button></section></div>
- </main>;
+import { CloudUploadButton } from './CloudBooks';
+
+export default function Cabinet() {
+  const { state, openSource, openResearch, openNote, navigate, composeNote } = useApp();
+  const cloud = useCloud();
+  const local = useLocalBooks();
+  const book = [...local.books, ...cloud.books].find(item => item.id === state.sourceId);
+  const source = state.sources.find(item => item.id === state.sourceId);
+  const current = book ?? source;
+  const recentNote = [...state.notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  const activeLines = state.research.filter(item => !item.archived);
+  const line = activeLines.find(item => item.id === state.researchId) ?? activeLines[0];
+  const linkedNotes = current ? state.notes.filter(item => item.sourceId === current.id) : [];
+  const progress = book && !book.local
+    ? cloud.records.find(item => item.kind === 'progress' && item.entity_id === book.id)?.data.anchor
+    : book?.local ? localProgress(book.id) : undefined;
+  const section = source?.sections.find(item => item.id === state.sectionId) ?? source?.sections[0];
+  const readLocation = progress?.format === 'pdf' && progress.page
+    ? `PDF · страница ${progress.page}`
+    : progress?.format === 'fb2' && progress.chapter
+      ? 'Позиция в книге сохранена'
+      : section?.title ?? (book ? 'Открыть книгу' : 'Выбрать источник');
+
+  return <main className="page cabinet cabinet-v2 page-enter" id="main">
+    <div className="cabinet-v2-intro">
+      <div><Label>ANTONOVIUM / Рабочее пространство</Label><h1>Научный кабинет<span>.</span></h1>
+        <p>Возвращайся к источнику, вопросу или рукописи с того места, где остановился.</p></div>
+      <div className="cabinet-v2-quick"><CloudUploadButton/><button className="button outline" onClick={() => composeNote()}>Записать мысль <span aria-hidden="true">+</span></button></div>
+    </div>
+
+    <div className="cabinet-v2-grid">
+      <section className="cabinet-v2-reading" aria-labelledby="cabinet-reading-title">
+        <div className="cabinet-v2-sectiontop"><Label>Продолжить чтение</Label><span>{book?.format?.toUpperCase() ?? (source?.format === 'paper' ? 'БУМАЖНОЕ ИЗДАНИЕ' : 'ТЕКСТ')}</span></div>
+        <div className="cabinet-v2-readingbody">
+          <span className="cabinet-v2-overline">{current ? ('demo' in current && current.demo ? 'Демонстрационный материал' : current.author || 'Источник из библиотеки') : 'Библиотека'}</span>
+          <h2 id="cabinet-reading-title">{current?.title ?? 'Начни со своего первого источника'}</h2>
+          <p>{current ? readLocation : 'Добавь PDF, FB2, текст или сведения о бумажной книге.'}</p>
+        </div>
+        {linkedNotes.length > 0 && <div className="cabinet-v2-readingnote"><span>Связанная заметка</span><button onClick={() => openNote(linkedNotes[0])}>{linkedNotes[0].title}<Arrow diagonal/></button></div>}
+        <button className="cabinet-v2-primary-action" onClick={() => current ? openSource(current.id) : navigate('library')}>
+          {current ? 'Вернуться к источнику' : 'Открыть библиотеку'} <Arrow/>
+        </button>
+      </section>
+
+      <section className="cabinet-v2-line" aria-labelledby="cabinet-line-title">
+        <div className="cabinet-v2-sectiontop"><Label>Исследовательская линия</Label><button onClick={() => navigate('lab')} aria-label="Открыть все исследовательские линии"><Arrow diagonal/></button></div>
+        {line ? <><span className="cabinet-v2-overline">{line.demo ? 'Демонстрационная линия' : 'Текущая работа'}</span>
+          <h2 id="cabinet-line-title">{line.title}</h2><div className="cabinet-v2-question"><span>Вопрос</span><p>{line.question || 'Научный вопрос еще не сформулирован'}</p></div>
+          <button className="cabinet-v2-link" onClick={() => openResearch(line.id)}>Продолжить рассуждение <Arrow/></button></>
+          : <><h2 id="cabinet-line-title">Начни с научного вопроса</h2><p>Исследовательские линии появятся здесь после создания.</p><button className="cabinet-v2-link" onClick={() => navigate('lab')}>Открыть лабораторию <Arrow/></button></>}
+      </section>
+
+      <section className="cabinet-v2-notes" aria-labelledby="cabinet-notes-title">
+        <div className="cabinet-v2-sectiontop"><Label>Последняя запись</Label><button onClick={() => composeNote()} aria-label="Создать заметку">+</button></div>
+        {recentNote ? <><span className="cabinet-v2-overline">{recentNote.demo ? 'Демонстрационная запись' : 'Собственная заметка'}</span>
+          <h2 id="cabinet-notes-title"><button onClick={() => openNote(recentNote)}>{recentNote.title}</button></h2>
+          <p>{recentNote.body || recentNote.quote || 'Открыть выделенный фрагмент'}</p><button className="cabinet-v2-link" onClick={() => openNote(recentNote)}>Открыть заметку <Arrow/></button></>
+          : <><h2 id="cabinet-notes-title">Мысль начинается здесь</h2><p>Сохрани свой тезис или вопрос, чтобы вернуться к нему позже.</p><button className="cabinet-v2-link" onClick={() => composeNote()}>Создать заметку <Arrow/></button></>}
+      </section>
+
+      <section className="cabinet-v2-writing" aria-labelledby="cabinet-writing-title">
+        <div className="cabinet-v2-sectiontop"><Label>Рукопись</Label><span>ПИСЬМЕННЫЙ СТОЛ</span></div>
+        <h2 id="cabinet-writing-title">{state.manuscriptTitle || 'Новая рукопись'}</h2>
+        <p>{state.manuscript.trim() ? 'Продолжить работу над собственным текстом.' : 'Чистый лист для следующего рассуждения.'}</p>
+        <button className="cabinet-v2-link" onClick={() => navigate('manuscripts')}>К рукописи <Arrow/></button>
+      </section>
+
+      <div className="cabinet-v2-access"><button onClick={() => navigate('library')}>Вся библиотека <Arrow diagonal/></button><button onClick={() => navigate('desk' as Screen)}>Исследовательский стол <Arrow diagonal/></button><button onClick={() => navigate('atlas')}>Интеллектуальный атлас <Arrow diagonal/></button></div>
+    </div>
+  </main>;
 }

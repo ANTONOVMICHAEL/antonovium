@@ -5,12 +5,13 @@ import type { Excerpt, Note, NoteKind } from '../types';
 import { newId } from '../storage';
 import { Modal } from './UI';
 import {useCloud} from '../cloud';
+import {useLocalBooks} from '../localBooks';
 export default function NoteComposer({excerpt,note,researchId,onClose}:{excerpt?:Excerpt;note?:Note;researchId?:string;onClose:()=>void}){
  const {state,update,toast,setSelectedNoteId,setSelection}=useApp();
  const [title,setTitle]=useState(note?.title??'');const[body,setBody]=useState(note?.body??'');
  const[kind,setKind]=useState<NoteKind>(note?.kind??'thought');const[tags,setTags]=useState<string[]>(note?.categories??[]);
  const[research,setResearch]=useState(note?.researchId??researchId??'');const[locator,setLocator]=useState(note?.locator??excerpt?.locator??'');
- const sourceId=note?.sourceId??excerpt?.sourceId;const cloud=useCloud();const book=cloud.books.find(b=>b.id===sourceId);const source=state.sources.find(x=>x.id===sourceId)??(book?{title:book.title,format:'digital',demo:false}:undefined);const[evidenceType,setEvidenceType]=useState<NonNullable<Note['evidenceType']>>(note?.evidenceType??'note');
+ const sourceId=note?.sourceId??excerpt?.sourceId;const cloud=useCloud(),local=useLocalBooks();const book=[...local.books,...cloud.books].find(b=>b.id===sourceId);const source=state.sources.find(x=>x.id===sourceId)??(book?{title:book.title,format:'digital',demo:false}:undefined);const[evidenceType,setEvidenceType]=useState<NonNullable<Note['evidenceType']>>(note?.evidenceType??'note');
  const quote=note?.quote??excerpt?.quote;
  function save(e:React.FormEvent){e.preventDefault();if(!title.trim()||(!body.trim()&&evidenceType!=='highlight'))return;
  const value:Note={...excerpt,...note,id:note?.id??newId(),title:title.trim(),body:body.trim(),kind,evidenceType,categories:tags,researchId:research||undefined,createdAt:note?.createdAt??new Date().toISOString(),demo:false,locator:locator.trim()||undefined};

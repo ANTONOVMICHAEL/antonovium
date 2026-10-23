@@ -1,0 +1,132 @@
+import {useEffect,useLayoutEffect,useMemo,useRef,useState,type CSSProperties,type ReactNode} from 'react';
+import {useApp} from '../context';
+import {fileApi,useCloud,type Book,type FileAnchor} from '../cloud';
+import {readLocalFile,useLocalBooks} from '../localBooks';
+import {sharedBookAliases} from '../bookMigration';
+import {decodeXML,parseFB2,type FB2Document} from '../fb2';
+import {paintFB2Highlights} from '../fb2Highlights';
+import type {PDFDocumentProxy} from '../pdf';
+import type {Excerpt,Note,Source} from '../types';
+import PDFScrollPage from './PDFScrollPage';
+
+type Side='left'|'right';
+type DeskSettings={leftId:string;rightId:string;leftSectionId?:string;rightSectionId?:string;ratio:number;active:Side;researchId?:string};
+type Material={id:string;title:string;byline:string;source?:Source;book?:Book};
+const clamp=(value:number,min:number,max:number)=>Math.min(max,Math.max(min,value));
+
+function selectedText(article:HTMLElement,source:Source,sectionId:string):Excerpt|null{
+ const selection=window.getSelection();if(!selection||selection.isCollapsed||!selection.rangeCount)return null;
+ const range=selection.getRangeAt(0);if(!article.contains(range.startContainer)||!article.contains(range.endContainer))return null;
+ const anchors:Excerpt['anchors']=[],quotes:string[]=[];
+ article.querySelectorAll<HTMLElement>('[data-desk-paragraph]').forEach(element=>{
+  if(!range.intersectsNode(element))return;const part=document.createRange();part.selectNodeContents(element);
+  if(element.contains(range.startContainer))part.setStart(range.startContainer,range.startOffset);
+  if(element.contains(range.endContainer))part.setEnd(range.endContainer,range.endOffset);
+  const value=part.toString();if(!value.trim())return;
+  const before=document.createRange();before.selectNodeContents(element);before.setEnd(part.startContainer,part.startOffset);
+  const start=before.toString().length;anchors.push({paragraphId:element.dataset.deskParagraph!,start,end:start+value.length});quotes.push(value);
+ });
+ return anchors.length?{sourceId:source.id,sectionId,quote:quotes.join('\n\n'),anchors,sourceTitle:source.title}:null;
+}
+
+function markedText(text:string,id:string,notes:Note[],edit:(note:Note)=>void):ReactNode{
+ const intervals=notes.flatMap(note=>(note.anchors??[]).filter(anchor=>anchor.paragraphId===id).map(anchor=>({start:anchor.start,end:anchor.end,note})));
+ const points=[...new Set([0,text.length,...intervals.flatMap(x=>[clamp(x.start,0,text.length),clamp(x.end,0,text.length)])])].sort((a,b)=>a-b);
+ return points.slice(0,-1).map((start,i)=>{const end=points[i+1],note=intervals.find(x=>x.start<=start&&x.end>=end)?.note;
+  return note?<mark className="desk-highlight" role="button" tabIndex={0} key={start} title={note.title} onClick={()=>edit(note)} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();edit(note)}}}>{text.slice(start,end)}</mark>:<span key={start}>{text.slice(start,end)}</span>;
+ });
+}
+
+function TextPane({source,sectionId,side,onSection,onSelection,focusNote,researchId}:{source:Source;sectionId?:string;side:Side;onSection:(id:string)=>void;onSelection:(excerpt:Excerpt)=>void;focusNote?:Note;researchId?:string}){
+ const{state,update,composeNote}=useApp();const section=source.sections.find(item=>item.id===sectionId)??source.sections[0];
+ const frame=useRef<HTMLDivElement>(null),article=useRef<HTMLElement>(null),timer=useRef<ReturnType<typeof setTimeout>|null>(null),pending=useRef<{key:string;position:number}|null>(null);
+ const key=`desk:${side}:${source.id}:${section?.id??''}`,notes=state.notes.filter(note=>note.sourceId===source.id);
+ useLayoutEffect(()=>{if(frame.current)frame.current.scrollTop=state.positions[key]??0},[key]);
+ useEffect(()=>{if(!focusNote?.anchors?.length||!frame.current||!article.current)return;const target=article.current.querySelector<HTMLElement>(`[data-desk-paragraph="${CSS.escape(focusNote.anchors[0].paragraphId)}"]`);if(target)frame.current.scrollTop+=target.getBoundingClientRect().top-frame.current.getBoundingClientRect().top-35},[focusNote?.id,key]);
+ useEffect(()=>()=>{if(timer.current)clearTimeout(timer.current);const last=pending.current;if(last){pending.current=null;update(s=>({...s,positions:{...s.positions,[last.key]:last.position}}))}},[key,update]);
+ function remember(){if(timer.current)clearTimeout(timer.current);const position=frame.current?.scrollTop??0;pending.current={key,position};timer.current=setTimeout(()=>{const last=pending.current;if(!last)return;pending.current=null;update(s=>({...s,positions:{...s.positions,[last.key]:last.position}}))},250)}
+ function capture(){if(!article.current||!section)return;const excerpt=selectedText(article.current,source,section.id);if(excerpt)onSelection(excerpt)}
+ if(source.format==='paper')return <div className="desk-paper"><p>Бумажное издание</p><h3>{source.title}</h3><span>{[source.author,source.year].filter(Boolean).join(' · ')}</span><button onClick={()=>composeNote({sourceId:source.id,sectionId:'',quote:'',anchors:[]},undefined,researchId)}>Заметка с указанием страницы →</button></div>;
+ return <><div className="desk-section-nav"><label>Раздел <select value={section?.id??''} onChange={event=>onSection(event.target.value)}>{source.sections.map(item=><option key={item.id} value={item.id}>{item.title}</option>)}</select></label><span>{source.sections.findIndex(item=>item.id===section?.id)+1} / {source.sections.length}</span></div>
+ <div className="desk-scroll" ref={frame} onScroll={remember} onMouseUp={()=>requestAnimationFrame(capture)} onTouchEnd={()=>setTimeout(capture,150)} onKeyUp={event=>{if(event.shiftKey)requestAnimationFrame(capture)}} tabIndex={0} aria-label={`Текст источника ${source.title}`}>
+ <article className="desk-text" ref={article} style={{'--desk-font':`${Math.max(16,state.fontSize-1)}px`,'--desk-leading':state.lineHeight} as CSSProperties}><span className="desk-kicker">{source.demo?'Демонстрационный текст':source.author??'Личный источник'}</span><h3>{section?.title}</h3>{source.demo&&<p className="desk-demo">Текст служит для проверки интерфейса; научной ссылкой не является.</p>}
+ {section?.paragraphs.map((p,index)=><div className="desk-paragraph" key={p.id}><span>{String(index+1).padStart(2,'0')}</span><p data-desk-paragraph={p.id}>{markedText(p.text,p.id,notes,edit=>composeNote(undefined,edit))}</p><button title="Заметка к абзацу" aria-label={`Заметка к абзацу ${index+1}`} onClick={()=>composeNote({sourceId:source.id,sectionId:section.id,quote:p.text,anchors:[{paragraphId:p.id,start:0,end:p.text.length}],sourceTitle:source.title},undefined,researchId)}>+</button></div>)}</article></div></>;
+}
+
+function FilePane({book,side,sectionId,onSection,onSelection,focusNote,researchId}:{book:Book;side:Side;sectionId?:string;onSection:(id:string)=>void;onSelection:(excerpt:Excerpt)=>void;focusNote?:Note;researchId?:string}){
+ const{state,update,composeNote,toast}=useApp();const[pdf,setPDF]=useState<PDFDocumentProxy|null>(null),[fb2,setFB2]=useState<FB2Document|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true),[width,setWidth]=useState(520);
+ const frame=useRef<HTMLDivElement>(null),chapterRef=useRef<HTMLElement>(null),timer=useRef<ReturnType<typeof setTimeout>|null>(null),pending=useRef<{key:string;position:number}|null>(null),currentPage=useRef(Number(sectionId?.match(/^pdf:(\d+)$/)?.[1]??1));
+ const chapter=fb2?.chapters.find(item=>item.id===sectionId)??fb2?.chapters[0],notes=useMemo(()=>state.notes.filter(note=>note.sourceId===book.id),[state.notes,book.id]),key=`desk:${side}:${book.id}:${book.format==='fb2'?chapter?.id??'first':'pdf'}`;
+ useEffect(()=>{const node=frame.current;if(!node)return;const observer=new ResizeObserver(()=>setWidth(Math.max(260,Math.floor(node.clientWidth-28))));observer.observe(node);return()=>observer.disconnect()},[]);
+ useEffect(()=>{let cancelled=false,task:{destroy:()=>Promise<void>}|undefined;const controller=new AbortController();setPDF(null);setFB2(null);setLoading(true);setError('');
+  (async()=>{try{
+   const signed=book.local?null:await fileApi('read',{id:book.id});if(cancelled)return;
+   if(book.format==='pdf'){const{openPDF}=await import('../pdf');const source=book.local?new Uint8Array(await(await readLocalFile(book.id)).arrayBuffer()):signed!.url;task=openPDF(source);const doc=await (task as ReturnType<typeof openPDF>).promise;if(cancelled){await task.destroy();return}setPDF(doc)}
+   else{let bytes:Uint8Array;if(book.local)bytes=new Uint8Array(await(await readLocalFile(book.id)).arrayBuffer());else{const response=await fetch(signed!.url,{signal:controller.signal,cache:'no-store'});if(!response.ok)throw Error('Файл не открылся');bytes=new Uint8Array(await response.arrayBuffer())}if(cancelled)return;setFB2(parseFB2(decodeXML(bytes)))}
+   setLoading(false);
+  }catch(e){if(!cancelled){setError((e as Error).message);setLoading(false)}}})();
+  return()=>{cancelled=true;controller.abort();void task?.destroy()};
+ },[book.id,book.local,book.format]);
+ useLayoutEffect(()=>{if(!loading&&frame.current){const saved=state.positions[key];frame.current.scrollTop=saved??0;if(saved===undefined&&book.format==='pdf'&&currentPage.current>1)requestAnimationFrame(()=>{const target=frame.current?.querySelector<HTMLElement>(`[data-page="${currentPage.current}"]`);if(target&&frame.current)frame.current.scrollTop+=target.getBoundingClientRect().top-frame.current.getBoundingClientRect().top})}},[key,loading]);
+ useEffect(()=>{if(!focusNote?.fileAnchor||loading||!frame.current)return;const id=focusNote.fileAnchor.format==='pdf'?`[data-page="${Number(focusNote.fileAnchor.page??1)}"]`:focusNote.fileAnchor.paragraph?`#${CSS.escape(focusNote.fileAnchor.paragraph)}`:'';const target=id?frame.current.querySelector<HTMLElement>(id):null;if(target)requestAnimationFrame(()=>{if(frame.current)frame.current.scrollTop+=target.getBoundingClientRect().top-frame.current.getBoundingClientRect().top-25})},[focusNote?.id,loading,chapter?.id]);
+ useEffect(()=>{if(book.format!=='fb2'||!chapterRef.current)return;paintFB2Highlights(chapterRef.current,notes)},[chapter?.id,notes,book.format]);
+ useEffect(()=>()=>{if(timer.current)clearTimeout(timer.current);const last=pending.current;if(last){pending.current=null;update(s=>({...s,positions:{...s.positions,[last.key]:last.position}}))}},[key,update]);
+ function remember(){if(timer.current)clearTimeout(timer.current);const frameNode=frame.current,top=frameNode?.scrollTop??0;if(pdf&&frameNode){const box=frameNode.getBoundingClientRect(),pages=Array.from(frameNode.querySelectorAll<HTMLElement>('[data-page]'));const visible=pages.filter(page=>page.getBoundingClientRect().top<box.top+box.height*.4).at(-1)??pages[0],page=Number(visible?.dataset.page??1);if(page!==currentPage.current){currentPage.current=page;onSection(`pdf:${page}`)}}pending.current={key,position:top};timer.current=setTimeout(()=>{const last=pending.current;if(!last)return;pending.current=null;update(s=>({...s,positions:{...s.positions,[last.key]:last.position}}))},300)}
+ function capture(){const selection=window.getSelection();if(!selection||selection.isCollapsed||!selection.rangeCount||!frame.current?.contains(selection.anchorNode)||!frame.current.contains(selection.focusNode))return;
+  const range=selection.getRangeAt(0),quote=selection.toString().trim();if(!quote||quote.length>20000)return;const start=range.startContainer.nodeType===1?range.startContainer as Element:range.startContainer.parentElement,end=range.endContainer.nodeType===1?range.endContainer as Element:range.endContainer.parentElement;
+  const anchor:FileAnchor={format:book.format,quote};
+  if(book.format==='pdf'){const page=start?.closest<HTMLElement>('.cloud-pdf-page');if(!page||page!==end?.closest('.cloud-pdf-page')){toast('Для заметки выдели фрагмент на одной странице');return}const box=page.getBoundingClientRect();anchor.page=Number(page.dataset.page);anchor.rects=Array.from(range.getClientRects()).filter(r=>r.width>1&&r.height>1).slice(0,200).map(r=>[clamp((r.left-box.left)/box.width,0,1),clamp((r.top-box.top)/box.height,0,1),clamp(r.width/box.width,0,1),clamp(r.height/box.height,0,1)])}
+  else{const first=start?.closest<HTMLElement>('[data-fb2-paragraph]'),last=end?.closest<HTMLElement>('[data-fb2-paragraph]');if(!first||!last)return;const before=document.createRange(),through=document.createRange();before.selectNodeContents(first);before.setEnd(range.startContainer,range.startOffset);through.selectNodeContents(last);through.setEnd(range.endContainer,range.endOffset);anchor.chapter=chapter?.id;anchor.paragraph=first.id;anchor.offset=before.toString().length;anchor.endParagraph=last.id;anchor.endOffset=through.toString().length;anchor.prefix=(first.textContent??'').slice(Math.max(0,(anchor.offset??0)-32),anchor.offset)}
+  onSelection({sourceId:book.id,sectionId:book.format==='pdf'?`pdf:${anchor.page}`:chapter?.id??'',quote,anchors:[],fileAnchor:anchor,locator:book.format==='pdf'?`Страница PDF ${anchor.page}`:`Глава: ${chapter?.title??''}`,sourceTitle:book.title});
+ }
+ return <><div className="desk-section-nav">{book.format==='fb2'?<label>Глава <select value={chapter?.id??''} onChange={event=>onSection(event.target.value)}>{fb2?.chapters.map(item=><option key={item.id} value={item.id}>{item.title}</option>)}</select></label>:<span>PDF · {pdf?.numPages??'…'} стр. · сейчас {currentPage.current}</span>}<button onClick={()=>composeNote({sourceId:book.id,sectionId:book.format==='fb2'?chapter?.id??'':`pdf:${currentPage.current}`,quote:'',anchors:[],fileAnchor:{format:book.format,chapter:chapter?.id,page:currentPage.current},sourceTitle:book.title},undefined,researchId)}>+ Заметка</button></div>
+ <div className="desk-scroll desk-file-scroll" ref={frame} onScroll={remember} onMouseUp={()=>requestAnimationFrame(capture)} onTouchEnd={()=>setTimeout(capture,150)} onKeyUp={event=>{if(event.shiftKey)requestAnimationFrame(capture)}} tabIndex={0} aria-label={`Текст книги ${book.title}`}>
+ {loading&&<p className="desk-loading" role="status">Открываю книгу…</p>}{error&&<p className="desk-error" role="alert">{error}</p>}
+ {pdf&&<div className="desk-pdf-pages">{Array.from({length:pdf.numPages},(_,index)=><PDFScrollPage key={index+1} pdf={pdf} pageNumber={index+1} width={Math.min(width,900)} zoom={1} scrollRoot={frame} notes={notes.filter(note=>note.fileAnchor?.page===index+1)} onNote={note=>composeNote(undefined,note)}/>)}</div>}
+ {fb2&&chapter&&<article ref={chapterRef} className="desk-fb2" style={{'--desk-font':`${Math.max(16,state.fontSize-1)}px`,'--desk-leading':state.lineHeight} as CSSProperties} onClick={event=>{const mark=(event.target as Element).closest<HTMLElement>('mark[data-cloud-highlight]');if(mark){const note=notes.find(item=>item.id===mark.dataset.cloudHighlight);if(note)composeNote(undefined,note)}}} dangerouslySetInnerHTML={{__html:chapter.html}}/>}
+ </div></>;
+}
+
+export default function ResearchDesk(){
+ const{state,update,composeNote,toast,navigate}=useApp(),cloud=useCloud(),local=useLocalBooks();
+ const aliases=sharedBookAliases(cloud.session?.user.id),aliasSignature=JSON.stringify(aliases);
+ function resolveId(id:string){if(!cloud.authorized)return id;const alias=aliases[id];if(alias&&cloud.books.some(book=>book.id===alias))return alias;const original=local.books.find(book=>book.id===id),replacement=original?.fingerprint?cloud.books.find(book=>book.fingerprint===original.fingerprint):undefined;return replacement?.id??id}
+ const materials=useMemo<Material[]>(()=>[
+  ...state.sources.map(source=>({id:source.id,title:source.title,byline:[source.author,source.year].filter(Boolean).join(' · ')||source.subtitle,source})),
+  ...local.books.filter(book=>!cloud.authorized||!cloud.books.some(other=>other.id===aliases[book.id]||!!book.fingerprint&&other.fingerprint===book.fingerprint)).map(book=>({id:book.id,title:book.title,byline:[book.author,book.edition].filter(Boolean).join(' · '),book})),
+  ...cloud.books.filter(book=>book.status==='ready').map(book=>({id:book.id,title:book.title,byline:[book.author,book.edition].filter(Boolean).join(' · '),book}))
+ ],[state.sources,local.books,cloud.books,cloud.authorized,aliasSignature]);
+ const persisted=state.desk as DeskSettings|undefined;
+ const fallback:DeskSettings={leftId:resolveId(state.sourceId)||materials[0]?.id||'',rightId:resolveId(state.compareSourceId)||materials.find(x=>x.id!==state.sourceId)?.id||'',ratio:.5,active:'left',researchId:state.researchId};
+ const desk=persisted??fallback,[ratio,setRatio]=useState(desk.ratio),[selection,setSelection]=useState<{side:Side;excerpt:Excerpt}|null>(null),[notesOpen,setNotesOpen]=useState(false),[focusNote,setFocusNote]=useState<Note|undefined>(),[mobile,setMobile]=useState(()=>matchMedia('(max-width:700px)').matches);
+ const box=useRef<HTMLDivElement>(null),dragging=useRef(false);
+ useEffect(()=>{const query=matchMedia('(max-width:700px)'),changed=()=>setMobile(query.matches);query.addEventListener('change',changed);changed();return()=>query.removeEventListener('change',changed)},[]);
+ useEffect(()=>setRatio(clamp(desk.ratio,.28,.72)),[desk.ratio]);
+ useEffect(()=>{if(!persisted&&materials.length)update({desk:fallback})},[persisted,materials.length]);
+ useEffect(()=>{if(!persisted||!cloud.authorized)return;const left=resolveId(persisted.leftId),right=resolveId(persisted.rightId);if(left===persisted.leftId&&right===persisted.rightId)return;
+  update(s=>{if(!s.desk)return s;const positions={...s.positions};for(const[side,oldId,newId]of [['left',s.desk.leftId,left],['right',s.desk.rightId,right]]as const)if(oldId!==newId){const prefix=`desk:${side}:${oldId}:`;for(const[key,value]of Object.entries(s.positions))if(key.startsWith(prefix)){const replacement=`desk:${side}:${newId}:${key.slice(prefix.length)}`;if(positions[replacement]===undefined)positions[replacement]=value}}
+   return {...s,positions,desk:{...s.desk,leftId:left,rightId:right}}});
+ },[persisted?.leftId,persisted?.rightId,cloud.authorized,cloud.books,local.books,cloud.session?.user.id,aliasSignature]);
+ function change(changes:Partial<DeskSettings>){update({desk:{...desk,...changes}})}
+ function choose(side:Side,id:string){change(side==='left'?{leftId:id,leftSectionId:undefined,active:side}:{rightId:id,rightSectionId:undefined,active:side});setSelection(null)}
+ function note(side:Side,excerpt:Excerpt){change({active:side});setSelection({side,excerpt})}
+ function resize(event:React.PointerEvent<HTMLDivElement>){if(!dragging.current||!box.current)return;const bounds=box.current.getBoundingClientRect();setRatio(clamp((event.clientX-bounds.left)/bounds.width,.28,.72))}
+ function finishResize(){if(dragging.current){dragging.current=false;change({ratio})}}
+ const activeResearch=state.research.find(item=>item.id===desk.researchId);
+ function pane(side:Side){const id=side==='left'?desk.leftId:desk.rightId,material=materials.find(item=>item.id===id)??materials[side==='left'?0:1]??materials[0],sectionId=side==='left'?desk.leftSectionId:desk.rightSectionId;
+  return <section className={`desk-pane ${desk.active===side?'active':''}`} key={side} aria-label={`${side==='left'?'Первый':'Второй'} источник`}><div className="desk-pane-head"><span className="desk-pane-index">{side==='left'?'01':'02'} / ИСТОЧНИК</span><button className="desk-pane-activate" onClick={()=>change({active:side})} aria-label={`Сделать ${side==='left'?'первый':'второй'} источник активным`}>↗</button></div>
+   <label className="desk-material-picker"><span className="sr-only">{side==='left'?'Первый':'Второй'} источник</span><select value={material?.id??''} onChange={event=>choose(side,event.target.value)}>{materials.map(item=><option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
+   <div className="desk-byline">{material?.byline||'Источник не выбран'}{material?.book&&` · ${material.book.format.toUpperCase()}${material.book.local?' · на устройстве':' · в облаке'}`}</div>
+   {(!mobile||desk.active===side)&&(material?.source?<TextPane key={material.source.id} source={material.source} sectionId={sectionId} side={side} researchId={desk.researchId} focusNote={focusNote?.sourceId===id?focusNote:undefined} onSection={id=>change(side==='left'?{leftSectionId:id}:{rightSectionId:id})} onSelection={excerpt=>note(side,excerpt)}/>:material?.book?<FilePane key={material.book.id} book={material.book} sectionId={sectionId} side={side} researchId={desk.researchId} focusNote={focusNote?.sourceId===id?focusNote:undefined} onSection={id=>change(side==='left'?{leftSectionId:id}:{rightSectionId:id})} onSelection={excerpt=>note(side,excerpt)}/>:<p className="desk-loading">Добавь источник в библиотеку.</p>)}
+   {selection?.side===side&&<div className="desk-selection" role="status"><span title={selection.excerpt.quote}>{selection.excerpt.quote.slice(0,75)}{selection.excerpt.quote.length>75?'…':''}</span><button onPointerDown={event=>event.preventDefault()} onClick={()=>{composeNote(selection.excerpt,undefined,desk.researchId);setSelection(null)}}>Заметка к фрагменту +</button><button aria-label="Скрыть выделение" onClick={()=>setSelection(null)}>×</button></div>}
+  </section>}
+ return <main className="research-desk page-enter" id="main"><header className="desk-heading"><div><span className="desk-eyebrow">ANTONOVIUM / РАБОЧЕЕ ПРОСТРАНСТВО</span><h1>Исследовательский стол<span>.</span></h1><p>Два источника, одна мысль. Каждая область сохраняет собственное место чтения.</p></div><button className="desk-library-link" onClick={()=>navigate('library')}>Библиотека ↗</button></header>
+ <div className="desk-context"><label><span>Исследовательская линия</span><select value={desk.researchId??''} onChange={event=>change({researchId:event.target.value||undefined})}><option value="">Без привязки к линии</option>{state.research.filter(item=>!item.archived).map(item=><option key={item.id} value={item.id}>{item.title}</option>)}</select></label>{activeResearch&&<p><strong>Вопрос:</strong> {activeResearch.question||'Пока не сформулирован'}</p>}<button onClick={()=>setNotesOpen(value=>!value)} aria-expanded={notesOpen}>Заметки {state.notes.filter(item=>item.researchId===desk.researchId).length} {notesOpen?'↑':'↓'}</button></div>
+ <div className="desk-mobile-tabs" role="group" aria-label="Активный источник"><button className={desk.active==='left'?'active':''} aria-pressed={desk.active==='left'} onClick={()=>change({active:'left'})}>01 · {materials.find(x=>x.id===desk.leftId)?.title??'Первый'}</button><button className={desk.active==='right'?'active':''} aria-pressed={desk.active==='right'} onClick={()=>change({active:'right'})}>02 · {materials.find(x=>x.id===desk.rightId)?.title??'Второй'}</button></div>
+ <div className={`desk-split active-${desk.active}`} ref={box} style={{'--desk-ratio':`${ratio*100}%`} as CSSProperties}>
+ {pane('left')}<div className="desk-divider" role="separator" aria-label="Изменить ширину источников" aria-orientation="vertical" tabIndex={0} onPointerDown={event=>{dragging.current=true;event.currentTarget.setPointerCapture(event.pointerId)}} onPointerMove={resize} onPointerUp={finishResize} onLostPointerCapture={finishResize} onKeyDown={event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();const value=clamp(desk.ratio+(event.key==='ArrowRight'?.04:-.04),.28,.72);setRatio(value);change({ratio:value})}}}><span>⋮</span></div>{pane('right')}
+ </div>
+ {notesOpen&&<aside className="desk-notes"><div><strong>Записи к линии</strong><button onClick={()=>composeNote(undefined,undefined,desk.researchId)}>Новая заметка +</button></div>{state.notes.filter(item=>item.researchId===desk.researchId&&!!desk.researchId).length?state.notes.filter(item=>item.researchId===desk.researchId).map(item=><div className="desk-note" key={item.id}><span>{item.sourceTitle??materials.find(x=>x.id===item.sourceId)?.title??'Без источника'}</span><strong>{item.title}</strong><small>{item.body}</small><div><button onClick={()=>composeNote(undefined,item)}>Редактировать</button>{item.sourceId&&<button onClick={()=>{const side:Side=desk.leftId===item.sourceId?'left':desk.rightId===item.sourceId?'right':desk.active;const changeSide=side==='left'?{leftId:item.sourceId,leftSectionId:item.fileAnchor?.format==='fb2'?item.fileAnchor.chapter:item.sectionId}:{rightId:item.sourceId,rightSectionId:item.fileAnchor?.format==='fb2'?item.fileAnchor.chapter:item.sectionId};change({...changeSide,active:side});setFocusNote(item)}}>К фрагменту →</button>}</div></div>):<p>Записи к этой линии пока не созданы.</p>}</aside>}
+ <div className="desk-status">{cloud.authorized?'Рабочий состав и текстовые позиции синхронизируются с аккаунтом':'Рабочий состав сохраняется на этом устройстве'} · <button onClick={()=>toast('Для работы с фрагментом выдели текст в одной из областей')}>Как добавить заметку?</button></div>
+ </main>;
+}
