@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ru">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ANTONOVIUM · демонстрационный кадр</title>
+<style>body{margin:0}.preview-message{min-height:100vh;display:grid;place-items:center;padding:32px;box-sizing:border-box;background:#e8edf0;color:#304453;font:16px/1.5 system-ui,sans-serif;text-align:center}.preview-message strong{display:block;font-size:23px;margin-bottom:8px}</style>
+</head>
+<body><div id="root"></div>
+<script>
+(async()=>{
+  const params=new URLSearchParams(location.search),version=params.get('version'),screen=params.get('screen'),candidate=params.get('candidate')==='1';
+  const known={
+    initial:['index-BEOrMKKu.js','style-BuRWV-LB.css'],
+    first:['index-Dl9Q6tnc.js','style-CY16TP_2.css'],
+    rebuild:['index-BoQW64UJ.js','style-D0qUYOep.css']
+  };
+  const allowed=['cabinet','library','reader','desk','atlas','lab','manuscripts'];
+  function message(title,detail){document.body.innerHTML='<div class="preview-message"><div><strong></strong><span></span></div></div>';document.querySelector('strong').textContent=title;document.querySelector('.preview-message span').textContent=detail}
+  if(![...Object.keys(known),'final'].includes(version)||!allowed.includes(screen)){message('Кадр недоступен','Проверьте выбранную версию и раздел.');return}
+  if(version==='initial'&&screen==='desk'){message('Раздел еще не существовал','Исследовательский стол появился в ANTONOVIUM 2.0.');return}
+
+  // Every preview frame has its own empty storage. It never reads the viewer's
+  // ANTONOVIUM account, local workspace, avatar, or personal book database.
+  class MemoryStorage{
+    constructor(){this.values=new Map()}
+    get length(){return this.values.size}
+    key(index){return [...this.values.keys()][index]??null}
+    getItem(key){return this.values.get(String(key))??null}
+    setItem(key,value){this.values.set(String(key),String(value))}
+    removeItem(key){this.values.delete(String(key))}
+    clear(){this.values.clear()}
+  }
+  try{
+    Object.defineProperty(window,'localStorage',{configurable:false,value:new MemoryStorage()});
+    Object.defineProperty(window,'sessionStorage',{configurable:false,value:new MemoryStorage()});
+    const nativeDB=window.indexedDB;
+    const demoDB=Object.create(nativeDB);
+    demoDB.open=(name,number)=>nativeDB.open('antonovium.visual-compare.'+version+'.'+name,number);
+    Object.defineProperty(window,'indexedDB',{configurable:false,value:demoDB});
+    const nativeFetch=window.fetch.bind(window);
+    window.fetch=(resource,options)=>{
+      const url=new URL(typeof resource==='string'?resource:resource.url,location.href);
+      if(url.hostname.endsWith('.supabase.co'))return Promise.reject(new Error('Облачные операции отключены в демонстрационном сравнении'));
+      return nativeFetch(resource,options);
+    };
+  }catch(error){message('Изоляция недоступна','Сравнение остановлено: браузер не позволил отделить личные данные.');return}
+  let assets=known[version];
+  if(version==='final'){
+    try{
+      const html=await fetch(candidate?'./candidate.html':'../index.html',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('Файл сборки недоступен');return r.text()});
+      assets=[html.match(/assets\/(index-[\w-]+\.js)/)?.[1],html.match(/assets\/(style-[\w-]+\.css)/)?.[1]];
+      if(assets.some(x=>!x))throw Error('Ресурсы сборки не найдены');
+    }catch(error){message(candidate?'Кандидат недоступен':'Финальная версия недоступна',error.message);return}
+  }
+  const stylesheet=document.createElement('link');
+  stylesheet.rel='stylesheet';stylesheet.href='../assets/'+assets[1];document.head.append(stylesheet);
+  const script=document.createElement('script');
+  script.type='module';script.src='../assets/'+assets[0];document.body.append(script);
+  const labels={library:'Библиотека',desk:'Стол',atlas:'Атлас',lab:'Лаборатория',manuscripts:'Рукописи'};
+  async function waitFor(test,limit=10000){
+    const start=Date.now();while(Date.now()-start<limit){const result=test();if(result)return result;await new Promise(resolve=>setTimeout(resolve,70))}
+    throw Error('Не удалось открыть раздел');
+  }
+  try{
+    await waitFor(()=>document.querySelector('.app-header'));
+    if(screen==='cabinet')return;
+    if(screen==='reader'){
+      const action=await waitFor(()=>[...document.querySelectorAll('main button')].find(b=>/Продолжить (чтение|работу|источник)|Открыть книгу|Читать дальше/i.test(b.textContent)));
+      action.click();
+      await waitFor(()=>document.querySelector('.reader'));
+    }else{
+      const nav=await waitFor(()=>[...document.querySelectorAll('nav button')].find(b=>b.textContent.trim().endsWith(labels[screen])));
+      nav.click();
+      const titles={library:'Библиотека',desk:'Исследовательский стол',atlas:'Атлас',lab:'Лаборатория',manuscripts:'Рукописи'};
+      await waitFor(()=>document.title.endsWith(titles[screen]));
+    }
+  }catch(error){message('Раздел не открылся',error.message)}
+})().catch(error=>{document.body.textContent='Ошибка демонстрационного кадра: '+error.message});
+</script>
+</body>
+</html>

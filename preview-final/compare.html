@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ANTONOVIUM · четыре версии</title>
+  <style>
+    :root{font-family:Inter,Onest,system-ui,sans-serif;color:#e9eef3;background:#101a26}
+    *{box-sizing:border-box}
+    body{margin:0;min-width:320px}
+    button,select{font:inherit}
+    header{padding:28px clamp(16px,3vw,48px) 20px;border-bottom:1px solid #334251;background:#142231}
+    .eyebrow{margin:0 0 8px;color:#77cfda;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+    h1{font-size:clamp(22px,2.5vw,38px);letter-spacing:-.045em;line-height:1.13;margin:0 0 10px;font-weight:660}
+    .intro{margin:0;color:#bac8d2;max-width:75ch;line-height:1.55}
+    .controls{position:sticky;top:0;z-index:5;padding:14px clamp(16px,3vw,48px);background:#172636f5;backdrop-filter:blur(16px);border-bottom:1px solid #344859;display:grid;gap:12px}
+    .control-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+    .control-row>span{font-size:12px;min-width:66px;color:#a9b8c4;font-weight:700}
+    button,select{border:1px solid #455c6c;background:#213448;color:#e9eef3;border-radius:7px;padding:7px 11px;cursor:pointer}
+    button:hover,select:hover{border-color:#78c5d2}
+    button[aria-pressed="true"]{background:#75d2da;color:#10212c;border-color:#75d2da;font-weight:700}
+    select{max-width:100%;min-height:36px}
+    .stage{overflow:auto;padding:20px clamp(16px,3vw,48px) 48px;scrollbar-color:#6a8292 #162331}
+    .frames{display:flex;align-items:flex-start;gap:20px;width:max-content;min-width:100%}
+    .version{flex:none;background:#1b2b3b;border:1px solid #374c5b;border-radius:11px;overflow:hidden;box-shadow:0 22px 60px #07111d60}
+    .version h2{margin:0;height:64px;padding:12px 16px;display:flex;flex-direction:column;justify-content:center;gap:3px;font-size:14px;font-weight:650}
+    .version h2 small{font-size:11px;font-weight:450;color:#aebec9}
+    iframe{display:block;border:0;background:#fff}
+    .note{padding:0 clamp(16px,3vw,48px) 38px;color:#aebec9;line-height:1.55;max-width:90ch;font-size:13px}
+    .note a{color:#87d7dd}
+    @media(max-width:700px){.controls{position:static}.control-row>span{width:100%}.stage{padding-top:12px}.version h2{height:58px}}
+  </style>
+</head>
+<body>
+  <header>
+    <p class="eyebrow">ANTONOVIUM / визуальная приемка</p>
+    <h1>Четыре состояния одного исследовательского пространства</h1>
+    <p class="intro">Выберите раздел и ширину экрана. Кадры открывают одинаковые демонстрационные материалы; личные записи и книги браузера в сравнении не используются. Каждый кадр можно прокрутить независимо.</p>
+  </header>
+  <div class="controls">
+    <div class="control-row" id="screens"><span>Раздел</span></div>
+    <div class="control-row" id="widths"><span>Экран</span></div>
+    <div class="control-row"><span>Показ</span><button data-layout="all" aria-pressed="true">Все четыре</button><button data-layout="pair" aria-pressed="false">Две версии</button><select id="against" aria-label="Сравнивать финальную версию с"><option value="rebuild">Реконструкция → финал</option><option value="first">Первая 2.0 → финал</option><option value="initial">До 2.0 → финал</option></select></div>
+  </div>
+  <main class="stage" aria-label="Сравнение версий"><div class="frames" id="frames"></div></main>
+  <p class="note">Раздел «Исследовательский стол» появился в ANTONOVIUM 2.0; исходная версия помечена как не имеющая этого экрана. Кадры изолируют локальное хранилище и IndexedDB и блокируют облачные запросы. Такое сравнение показывает интерфейс на демонстрационных данных, а не проводит функциональное тестирование облачной библиотеки.</p>
+  <script>
+    const candidate=new URLSearchParams(location.search).get('candidate')==='1';
+    const versions={
+      initial:['До ANTONOVIUM 2.0','55f8150 · первая публикация'],
+      first:['Первая ANTONOVIUM 2.0','d3bb804 · до реконструкции'],
+      rebuild:['Вторая реконструкция','b5a7872 · предыдущая публикация'],
+      final:['Финальная версия',candidate?'кандидат · до публикации':'актуальная публикация']
+    };
+    const screens={cabinet:'Кабинет',library:'Библиотека',reader:'Читальный зал',desk:'Исследовательский стол',atlas:'Атлас',lab:'Лаборатория',manuscripts:'Рукописи'};
+    const sizes=[1920,1440,1280,1024,768,390,360];
+    let screen='cabinet',width=1280,layout='all';
+    const screenBar=document.querySelector('#screens'),widthBar=document.querySelector('#widths'),frames=document.querySelector('#frames');
+    for(const [id,label] of Object.entries(screens)){const button=document.createElement('button');button.textContent=label;button.dataset.screen=id;button.onclick=()=>{screen=id;render()};screenBar.append(button)}
+    for(const size of sizes){const button=document.createElement('button');button.textContent=size+' px';button.dataset.width=size;button.onclick=()=>{width=size;render()};widthBar.append(button)}
+    document.querySelector('[data-layout="all"]').onclick=()=>{layout='all';render()};
+    document.querySelector('[data-layout="pair"]').onclick=()=>{layout='pair';render()};
+    document.querySelector('#against').onchange=render;
+    function render(){
+      document.querySelectorAll('[data-screen]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.screen===screen)));
+      document.querySelectorAll('[data-width]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.width)===width)));
+      document.querySelectorAll('[data-layout]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.layout===layout)));
+      document.querySelector('#against').disabled=layout==='all';
+      const selected=layout==='all'?Object.keys(versions):[document.querySelector('#against').value,'final'];
+      const height=width>=1024?900:width>=768?1024:844;
+      frames.replaceChildren(...selected.map(version=>{
+        const card=document.createElement('section');card.className='version';
+        const heading=document.createElement('h2');heading.textContent=versions[version][0];
+        const detail=document.createElement('small');detail.textContent=versions[version][1];heading.append(detail);
+        const frame=document.createElement('iframe');
+        frame.title=versions[version][0]+' · '+screens[screen]+' · '+width+' пикселей';
+        frame.width=width;frame.height=height;
+        frame.loading='lazy';
+        frame.src='./runner.html?version='+encodeURIComponent(version)+'&screen='+encodeURIComponent(screen)+(candidate?'&candidate=1':'');
+        card.append(heading,frame);return card;
+      }));
+    }
+    render();
+  </script>
+</body>
+</html>
