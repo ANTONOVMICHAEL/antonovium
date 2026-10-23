@@ -1,9 +1,4 @@
-/* Shared surface, type scale and compact application shell. */
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--ink);font:var(--weight-regular) var(--type-body)/var(--leading-body) var(--ui);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-button,input,select,textarea{min-width:0}
-button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
-.application{overflow-x:clip}
+/* Compact application shell and shared page layouts. Base type and controls live in styles.css. */
 .app-header{position:relative;z-index:30;max-width:none;width:100%;margin:0;padding:0;background:var(--shell);color:var(--shell-text);border-bottom:1px solid var(--shell-line)}
 .shell-desktop-bar{height:68px;max-width:1600px;padding-inline:clamp(22px,2.6vw,44px);margin:auto;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:clamp(16px,1.8vw,30px)}
 .shell-brand{display:inline-flex;align-items:center;gap:8px;flex:none;padding:3px 0;min-height:48px;color:var(--ink);white-space:nowrap;text-align:left}
@@ -53,15 +48,7 @@ button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid 
 .page-deck{font:400 var(--type-md)/1.5 var(--ui);color:var(--muted)}
 .eyebrow,.page-topline>.eyebrow{font:650 var(--type-xs)/1.35 var(--ui);letter-spacing:.01em;text-transform:none}
 .page-topline>span:last-child:not(:first-child){font-size:var(--type-xs)}
-.fineprint{font-size:var(--type-xs);line-height:1.45}
-.button{border-radius:9px;font-family:var(--ui);transition:background-color var(--motion-fast),color var(--motion-fast),border-color var(--motion-fast),transform var(--motion-fast)}
-.button:not(:disabled):active{transform:translateY(1px)}
-.text-link,.text-button{min-height:38px}
-.tag{border-radius:5px}
-.modal{border-radius:14px;box-shadow:0 28px 85px #1e273744}
-.modal-head h2{font:650 24px/var(--leading-heading) var(--ui);letter-spacing:-.025em}
 .app-footer{max-width:1600px;padding:24px clamp(22px,3.2vw,54px);font-size:var(--type-xs)}
-.app-footer button{font-size:var(--type-xs)}
 .page-enter{animation:page-in var(--motion-medium) ease-out}
 @keyframes shell-rise{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 @media(max-width:1440px){.shell-sync{display:none}}

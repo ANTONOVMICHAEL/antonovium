@@ -1,8 +1,7 @@
 import { useApp } from '../context';
 import { useCloud } from '../cloud';
 import { useLocalBooks, localProgress } from '../localBooks';
-import type { Screen } from '../types';
-import { Arrow, Label } from './UI';
+import { Arrow } from './UI';
 import { CloudUploadButton } from './CloudBooks';
 
 export default function Cabinet() {
@@ -12,65 +11,90 @@ export default function Cabinet() {
   const book = [...local.books, ...cloud.books].find(item => item.id === state.sourceId);
   const source = state.sources.find(item => item.id === state.sourceId);
   const current = book ?? source;
-  const recentNote = [...state.notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
   const activeLines = state.research.filter(item => !item.archived);
   const line = activeLines.find(item => item.id === state.researchId) ?? activeLines[0];
-  const linkedNotes = current ? state.notes.filter(item => item.sourceId === current.id) : [];
+  const notes = [...state.notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const sourceNote = current && notes.find(item => item.sourceId === current.id);
+  const recentNote = notes[0];
   const progress = book && !book.local
     ? cloud.records.find(item => item.kind === 'progress' && item.entity_id === book.id)?.data.anchor
     : book?.local ? localProgress(book.id) : undefined;
   const section = source?.sections.find(item => item.id === state.sectionId) ?? source?.sections[0];
-  const readLocation = progress?.format === 'pdf' && progress.page
-    ? `PDF · страница ${progress.page}`
+  const location = progress?.format === 'pdf' && progress.page
+    ? `Страница ${progress.page} в PDF`
     : progress?.format === 'fb2' && progress.chapter
-      ? 'Позиция в книге сохранена'
-      : section?.title ?? (book ? 'Открыть книгу' : 'Выбрать источник');
+      ? 'Сохранено место в книге'
+      : section?.title ?? (book ? 'Открыть книгу' : 'Выбрать материал');
+  function noteCurrentSource() {
+    if (!current) { composeNote(); return; }
+    composeNote({
+      sourceId: current.id,
+      sectionId: book?.format === 'pdf' && progress?.page ? `pdf:${progress.page}` : progress?.chapter ?? section?.id ?? '',
+      sourceTitle: current.title,
+      quote: '',
+      anchors: [],
+      fileAnchor: progress,
+      locator: progress?.format === 'pdf' && progress.page ? `Страница PDF ${progress.page}` : undefined
+    });
+  }
 
-  return <main className="page cabinet cabinet-v2 page-enter" id="main">
-    <div className="cabinet-v2-intro">
-      <div><Label>ANTONOVIUM / Рабочее пространство</Label><h1>Научный кабинет<span>.</span></h1>
-        <p>Возвращайся к источнику, вопросу или рукописи с того места, где остановился.</p></div>
-      <div className="cabinet-v2-quick"><CloudUploadButton/><button className="button outline" onClick={() => composeNote()}>Записать мысль <span aria-hidden="true">+</span></button></div>
+  return <main className="page cabinet cabinet-v3 page-enter" id="main">
+    <div className="cabinet-v3-head">
+      <div><span className="cabinet-v3-kicker">ANTONOVIUM <i/> ЛИЧНОЕ ПРОСТРАНСТВО</span>
+        <h1>Научный кабинет<span className="cabinet-v3-period">.</span></h1></div>
+      <div className="cabinet-v3-actions"><CloudUploadButton/><button className="button outline" onClick={() => composeNote()}>Записать мысль <span aria-hidden="true">+</span></button></div>
     </div>
 
-    <div className="cabinet-v2-grid">
-      <section className="cabinet-v2-reading" aria-labelledby="cabinet-reading-title">
-        <div className="cabinet-v2-sectiontop"><Label>Продолжить чтение</Label><span>{book?.format?.toUpperCase() ?? (source?.format === 'paper' ? 'БУМАЖНОЕ ИЗДАНИЕ' : 'ТЕКСТ')}</span></div>
-        <div className="cabinet-v2-readingbody">
-          <span className="cabinet-v2-overline">{current ? ('demo' in current && current.demo ? 'Демонстрационный материал' : current.author || 'Источник из библиотеки') : 'Библиотека'}</span>
-          <h2 id="cabinet-reading-title">{current?.title ?? 'Начни со своего первого источника'}</h2>
-          <p>{current ? readLocation : 'Добавь PDF, FB2, текст или сведения о бумажной книге.'}</p>
-        </div>
-        {linkedNotes.length > 0 && <div className="cabinet-v2-readingnote"><span>Связанная заметка</span><button onClick={() => openNote(linkedNotes[0])}>{linkedNotes[0].title}<Arrow diagonal/></button></div>}
-        <button className="cabinet-v2-primary-action" onClick={() => current ? openSource(current.id) : navigate('library')}>
-          {current ? 'Вернуться к источнику' : 'Открыть библиотеку'} <Arrow/>
-        </button>
-      </section>
+    <div className="cabinet-v3-current">
+      <div className="cabinet-v3-current-head"><span><b>01</b> / ОТКРЫТЫЙ ИСТОЧНИК</span><button onClick={() => navigate('library')}>Библиотека <Arrow diagonal/></button></div>
+      <div className="cabinet-v3-current-grid">
+        <section className="cabinet-v3-source" aria-labelledby="cabinet-current-title">
+          <span className="cabinet-v3-meta">{current ? ('demo' in current && current.demo ? 'Демонстрационный материал' : book?.local ? 'Только на этом устройстве' : book ? 'В личной библиотеке' : 'Собственный текст') : 'Первый источник'}</span>
+          <h2 id="cabinet-current-title">{current?.title ?? 'С чего начнем исследование?'}</h2>
+          <p className="cabinet-v3-author">{current?.author || (current ? 'Сведения об авторе не указаны' : 'Добавь книгу или текст в библиотеку')}</p>
+          {current && <p className="cabinet-v3-location"><span aria-hidden="true">↳</span> {location}</p>}
+          <button className="cabinet-v2-primary-action cabinet-v3-primary" onClick={() => current ? openSource(current.id) : navigate('library')}>{current ? 'Продолжить чтение' : 'Открыть библиотеку'} <Arrow/></button>
+        </section>
+        <aside className="cabinet-v3-margin" aria-label="Запись к открытому источнику">
+          <span className="cabinet-v3-meta">НА ПОЛЯХ ЭТОГО ИСТОЧНИКА</span>
+          {sourceNote ? <><button className="cabinet-v3-margin-title" onClick={() => openNote(sourceNote)}>{sourceNote.title}</button>
+            <p>{sourceNote.body || sourceNote.quote || 'Открыть выделенный фрагмент'}</p>
+            <button className="cabinet-v3-small-link" onClick={() => openNote(sourceNote)}>Перейти к записи <Arrow diagonal/></button></>
+            : <><p className="cabinet-v3-margin-empty">Заметки к этому источнику появятся здесь, когда ты сохранишь фрагмент или собственное суждение.</p>
+              <button className="cabinet-v3-small-link" onClick={noteCurrentSource}>Создать заметку к источнику <Arrow diagonal/></button></>}
+        </aside>
+      </div>
+    </div>
 
-      <section className="cabinet-v2-line" aria-labelledby="cabinet-line-title">
-        <div className="cabinet-v2-sectiontop"><Label>Исследовательская линия</Label><button onClick={() => navigate('lab')} aria-label="Открыть все исследовательские линии"><Arrow diagonal/></button></div>
-        {line ? <><span className="cabinet-v2-overline">{line.demo ? 'Демонстрационная линия' : 'Текущая работа'}</span>
-          <h2 id="cabinet-line-title">{line.title}</h2><div className="cabinet-v2-question"><span>Вопрос</span><p>{line.question || 'Научный вопрос еще не сформулирован'}</p></div>
-          <button className="cabinet-v2-link" onClick={() => openResearch(line.id)}>Продолжить рассуждение <Arrow/></button></>
-          : <><h2 id="cabinet-line-title">Начни с научного вопроса</h2><p>Исследовательские линии появятся здесь после создания.</p><button className="cabinet-v2-link" onClick={() => navigate('lab')}>Открыть лабораторию <Arrow/></button></>}
+    <div className="cabinet-v3-work">
+      <section className="cabinet-v3-inquiry" aria-labelledby="cabinet-line-title">
+        <div className="cabinet-v3-row-head"><span><b>02</b> / ИССЛЕДОВАТЕЛЬСКАЯ ЛИНИЯ</span><button onClick={() => navigate('lab')}>Все линии <Arrow diagonal/></button></div>
+        {line ? <><span className="cabinet-v3-meta">{line.demo ? 'ДЕМОНСТРАЦИОННАЯ ЛИНИЯ' : 'В РАБОТЕ'}</span>
+          <h2 id="cabinet-line-title">{line.title}</h2>
+          <div className="cabinet-v3-question"><span>НАУЧНЫЙ ВОПРОС</span><p>{line.question || 'Вопрос пока не сформулирован'}</p></div>
+          {line.hypothesis && <div className="cabinet-v3-hypothesis"><span>РАБОЧАЯ ГИПОТЕЗА</span><p>{line.hypothesis}</p></div>}
+          <button className="cabinet-v3-small-link" onClick={() => openResearch(line.id)}>Продолжить исследование <Arrow/></button></>
+          : <><h2 id="cabinet-line-title">Поставь исследовательский вопрос</h2><p className="cabinet-v3-empty">В лаборатории можно связать гипотезу, источники и собственные записи.</p><button className="cabinet-v3-small-link" onClick={() => navigate('lab')}>Открыть лабораторию <Arrow/></button></>}
       </section>
-
-      <section className="cabinet-v2-notes" aria-labelledby="cabinet-notes-title">
-        <div className="cabinet-v2-sectiontop"><Label>Последняя запись</Label><button onClick={() => composeNote()} aria-label="Создать заметку">+</button></div>
-        {recentNote ? <><span className="cabinet-v2-overline">{recentNote.demo ? 'Демонстрационная запись' : 'Собственная заметка'}</span>
-          <h2 id="cabinet-notes-title"><button onClick={() => openNote(recentNote)}>{recentNote.title}</button></h2>
-          <p>{recentNote.body || recentNote.quote || 'Открыть выделенный фрагмент'}</p><button className="cabinet-v2-link" onClick={() => openNote(recentNote)}>Открыть заметку <Arrow/></button></>
-          : <><h2 id="cabinet-notes-title">Мысль начинается здесь</h2><p>Сохрани свой тезис или вопрос, чтобы вернуться к нему позже.</p><button className="cabinet-v2-link" onClick={() => composeNote()}>Создать заметку <Arrow/></button></>}
+      <section className="cabinet-v3-note" aria-labelledby="cabinet-notes-title">
+        <div className="cabinet-v3-row-head"><span><b>03</b> / ПОСЛЕДНЯЯ ЗАПИСЬ</span><button onClick={() => composeNote()} aria-label="Создать заметку">+</button></div>
+        {recentNote ? <><span className="cabinet-v3-meta">{recentNote.demo ? 'ДЕМОНСТРАЦИОННАЯ ЗАПИСЬ' : 'СОБСТВЕННАЯ ЗАМЕТКА'}</span>
+          <h2 id="cabinet-notes-title"><button onClick={() => openNote(recentNote)}>{recentNote.title}</button></h2><p>{recentNote.body || recentNote.quote || 'Открыть выделенный фрагмент'}</p>
+          <button className="cabinet-v3-small-link" onClick={() => openNote(recentNote)}>Открыть заметку <Arrow/></button></>
+          : <><h2 id="cabinet-notes-title">Место для первого тезиса</h2><p>Запиши наблюдение, вопрос или возражение в ходе чтения.</p><button className="cabinet-v3-small-link" onClick={() => composeNote()}>Создать заметку <Arrow/></button></>}
       </section>
+    </div>
 
-      <section className="cabinet-v2-writing" aria-labelledby="cabinet-writing-title">
-        <div className="cabinet-v2-sectiontop"><Label>Рукопись</Label><span>ПИСЬМЕННЫЙ СТОЛ</span></div>
-        <h2 id="cabinet-writing-title">{state.manuscriptTitle || 'Новая рукопись'}</h2>
-        <p>{state.manuscript.trim() ? 'Продолжить работу над собственным текстом.' : 'Чистый лист для следующего рассуждения.'}</p>
-        <button className="cabinet-v2-link" onClick={() => navigate('manuscripts')}>К рукописи <Arrow/></button>
+    <div className="cabinet-v3-lower">
+      <section className="cabinet-v3-manuscript" aria-labelledby="cabinet-writing-title">
+        <span><b>04</b> / РУКОПИСЬ</span><div><h2 id="cabinet-writing-title">{state.manuscriptTitle || 'Новая рукопись'}</h2>
+          <p>{state.manuscript.trim() ? 'Вернуться к своему тексту' : 'Начать текст'}</p></div>
+        <button onClick={() => navigate('manuscripts')} aria-label="Открыть рукопись"><Arrow diagonal/></button>
       </section>
-
-      <div className="cabinet-v2-access"><button onClick={() => navigate('library')}>Вся библиотека <Arrow diagonal/></button><button onClick={() => navigate('desk' as Screen)}>Исследовательский стол <Arrow diagonal/></button><button onClick={() => navigate('atlas')}>Интеллектуальный атлас <Arrow diagonal/></button></div>
+      <nav className="cabinet-v3-shortcuts" aria-label="Рабочие пространства">
+        <button onClick={() => navigate('desk')}>Исследовательский стол <Arrow diagonal/></button>
+        <button onClick={() => navigate('atlas')}>Интеллектуальный атлас <Arrow diagonal/></button>
+      </nav>
     </div>
   </main>;
 }

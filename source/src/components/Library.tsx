@@ -31,18 +31,40 @@ export default function Library(){
  const showTexts=filter!=='files';
  const fileMatches=[...local.books,...cloud.books].some(b=>`${b.title} ${b.author} ${b.edition}`.toLocaleLowerCase('ru').includes(term));
  function switchView(next:'list'|'shelf'){setView(next);localStorage.setItem('antonovium.library.view',next)}
- return <main className="page library-page library-v2 page-enter" id="main">
-  <div className="library-v2-intro"><div><Label>Источники / личная коллекция</Label><h1>Библиотека<span>.</span></h1><p>Открой книгу, вернись к заметке или добавь новый материал для работы.</p></div>
-   <div className="cloud-library-actions"><CloudUploadButton/><button className="button outline" onClick={()=>setAdding(true)}>Добавить текст или издание <span aria-hidden="true">+</span></button></div></div>
-  <div className="library-v2-tools"><div className="library-v2-filters" role="group" aria-label="Показать источники">
-   {([['all','Все'],['files','PDF и FB2'],['digital','Цифровые'],['paper','Бумажные']] as const).map(([id,label])=><button aria-pressed={filter===id} className={filter===id?'active':''} key={id} onClick={()=>setFilter(id)}>{label}</button>)}
-  </div><div className="library-v2-options"><label className="library-v2-search"><span aria-hidden="true">⌕</span><input aria-label="Поиск в библиотеке" type="search" placeholder="Название, автор, издание" value={search} onChange={e=>setSearch(e.target.value)}/></label>
-   <div className="library-v2-view" role="group" aria-label="Вид каталога"><button aria-pressed={view==='list'} className={view==='list'?'active':''} title="Компактный список" onClick={()=>switchView('list')}>≡ <span>Список</span></button><button aria-pressed={view==='shelf'} className={view==='shelf'?'active':''} title="Визуальный каталог" onClick={()=>switchView('shelf')}>▦ <span>Каталог</span></button></div></div></div>
-  <div className={`library-v2-results catalog-${view}`}>
-   {showFiles&&<section className="library-v2-group" aria-label="Книги PDF и FB2"><div className="library-v2-grouphead"><span>01 / Книги и файлы</span><span>На устройстве и в личном облаке</span></div><CloudBooks search={search}/>{!fileMatches&&<Empty title={term?'Книги не найдены':'Здесь появятся PDF и FB2'}>{term?'Попробуй другое название или автора.':'Добавь книгу с устройства и выбери, где ее хранить.'}</Empty>}</section>}
-   {showTexts&&<section className="library-v2-group" aria-label="Тексты и бумажные издания"><div className="library-v2-grouphead"><span>{showFiles?'02':'01'} / {filter==='paper'?'Бумажные издания':'Тексты и издания'}</span><label>Порядок <select value={sort} onChange={e=>setSort(e.target.value as typeof sort)}><option value="recent">Недавно добавленные</option><option value="title">По названию</option><option value="author">По автору</option></select></label></div>
-    {sources.length?<div className="library-v2-source-grid">{sources.map((s,i)=><article className="source-row library-v2-source" key={s.id}><span className="row-number">{String(i+1).padStart(2,'0')}</span><div className="source-main"><div className="note-meta"><span>{s.format==='paper'?'Бумажное издание':'Текст'}</span>{s.demo&&<span className="demo-label">Демонстрационный материал</span>}</div><button className="source-title" onClick={()=>openSource(s.id)}>{s.title}</button><p>{[s.author,s.year].filter(Boolean).join(' · ')||s.subtitle}</p><div className="tags">{s.categories.slice(0,3).map(id=><button className="tag" key={id} onClick={()=>openCategory(id)}>{categoryTitle(id)}</button>)}</div></div><div className="source-stats"><span>{state.notes.filter(n=>n.sourceId===s.id).length} заметок</span><button className="button outline" onClick={()=>openSource(s.id)}>{s.format==='paper'?'К записям':'Читать'} <Arrow/></button></div></article>)}</div>
-      :<Empty title="Нет подходящих материалов">Измени запрос или добавь свое издание.</Empty>}</section>}
-  </div><p className="collection-foot">Демонстрационные тексты отмечены отдельно. Собственные книги и заметки доступны согласно выбранному способу хранения.</p>{adding&&<AddSource onClose={()=>setAdding(false)}/>}
+ return <main className="page library-page library-v3 page-enter" id="main">
+  <header className="library-v3-head">
+   <div><span className="library-v3-kicker">ANTONOVIUM <i/> ИСТОЧНИКИ И МАТЕРИАЛЫ</span><h1>Библиотека<span>.</span></h1></div>
+   <div className="library-v3-add"><CloudUploadButton/><button className="button outline" onClick={()=>setAdding(true)}>Добавить текст или издание <span aria-hidden="true">+</span></button></div>
+  </header>
+  <div className="library-v3-searchbar">
+   <label className="library-v3-search"><span aria-hidden="true">⌕</span><input aria-label="Поиск в библиотеке" type="search" placeholder="Название, автор, сведения об издании" value={search} onChange={e=>setSearch(e.target.value)}/></label>
+   <div className="library-v3-view" role="group" aria-label="Вид каталога"><button aria-pressed={view==='list'} className={view==='list'?'active':''} onClick={()=>switchView('list')}>≡ <span>Список</span></button><button aria-pressed={view==='shelf'} className={view==='shelf'?'active':''} onClick={()=>switchView('shelf')}>▦ <span>Каталог</span></button></div>
+  </div>
+  <div className="library-v3-body">
+   <aside className="library-v3-index" aria-label="Разделы библиотеки">
+    <span className="library-v3-index-label">КАТАЛОГ / ВИД</span>
+    <div role="group" aria-label="Показать источники">
+     {([['all','Все источники'],['files','PDF и FB2'],['digital','Цифровые'],['paper','Бумажные']] as const).map(([id,label],i)=><button aria-pressed={filter===id} className={filter===id?'active':''} key={id} onClick={()=>setFilter(id)}><span>0{i+1}</span>{label}<Arrow diagonal/></button>)}
+    </div>
+    <p>Книги, тексты и записи об изданиях в одном рабочем контексте.</p>
+   </aside>
+   <div className={`library-v3-results catalog-${view}`}>
+    {showFiles&&<section className="library-v3-group" aria-label="Книги PDF и FB2">
+     <div className="library-v3-grouphead"><span><b>01</b> / КНИГИ PDF И FB2</span><small>Личное облако и файлы на устройстве</small></div>
+     <CloudBooks search={search}/>{!fileMatches&&<Empty title={term?'Книги не найдены':'Здесь появятся PDF и FB2'}>{term?'Попробуй другое название или автора.':'Добавь книгу с устройства и выбери, где ее хранить.'}</Empty>}
+    </section>}
+    {showTexts&&<section className="library-v3-group" aria-label="Тексты и бумажные издания">
+     <div className="library-v3-grouphead"><span><b>{showFiles?'02':'01'}</b> / {filter==='paper'?'БУМАЖНЫЕ ИЗДАНИЯ':'ТЕКСТЫ И ИЗДАНИЯ'}</span><label>Порядок <select value={sort} onChange={e=>setSort(e.target.value as typeof sort)}><option value="recent">Недавно добавленные</option><option value="title">По названию</option><option value="author">По автору</option></select></label></div>
+     {sources.length?<div className="library-v3-source-grid">{sources.map((s,i)=><article className="source-row library-v3-source" key={s.id}>
+      <span className="row-number">{String(i+1).padStart(2,'0')}</span><div className="source-main"><div className="note-meta"><span>{s.format==='paper'?'Бумажное издание':'Цифровой текст'}</span>{s.demo&&<span className="demo-label">Демонстрационный материал</span>}</div>
+       <button className="source-title" onClick={()=>openSource(s.id)}>{s.title}</button><p>{[s.author,s.year].filter(Boolean).join(' · ')||s.subtitle}</p>
+       <div className="tags">{s.categories.slice(0,3).map(id=><button className="tag" key={id} onClick={()=>openCategory(id)}>{categoryTitle(id)}</button>)}</div></div>
+      <div className="source-stats"><span>{state.notes.filter(n=>n.sourceId===s.id).length} заметок</span><button className="button outline" onClick={()=>openSource(s.id)}>{s.format==='paper'?'К записям':'Читать'} <Arrow/></button></div>
+     </article>)}</div>:<Empty title="Нет подходящих материалов">Измени запрос или добавь свое издание.</Empty>}
+    </section>}
+   </div>
+  </div>
+  <p className="library-v3-foot">Демонстрационные тексты отмечены отдельно. Выбранный способ хранения определяет, на каких устройствах доступны собственные книги.</p>
+  {adding&&<AddSource onClose={()=>setAdding(false)}/>}
  </main>;
 }

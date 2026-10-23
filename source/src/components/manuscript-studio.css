@@ -53,14 +53,14 @@
 @media(max-width:1180px){.ms-command-group{gap:10px;padding:9px 16px}.ms-command-group>span{display:none}.ms-workspace.has-context{grid-template-columns:minmax(0,1fr) minmax(270px,310px)}}
 @media(max-width:899px){
  .ms-intro{grid-template-columns:1fr;padding:12px 0 24px;gap:16px}.ms-intro-copy h1{font-size:clamp(38px,6vw,53px);margin:11px 0}.ms-intro-aside{border:0;padding:0;flex-direction:row;flex-wrap:wrap;gap:7px 18px}
- .ms-commandbar{margin-bottom:14px;justify-content:space-between}.ms-workspace.has-context{display:block}.ms-context-scrim{display:block;position:fixed;inset:0;z-index:37;background:rgba(12,22,35,.42)}
- .ms-context{position:fixed;z-index:38;inset:auto 0 0;width:100%;height:min(82dvh,760px);min-height:0;border:0;border-top:1px solid var(--line);box-shadow:0 -20px 70px rgba(10,20,37,.19);padding-bottom:env(safe-area-inset-bottom)}
- .ms-context-head{padding:20px 22px 14px}.ms-context-scroll{padding:0 22px 22px}.ms-tabs{padding:0 22px}
+ .ms-commandbar{margin-bottom:14px;justify-content:space-between}.ms-workspace.has-context{display:block}.ms-context-scrim{display:block;position:fixed;inset:0;z-index:51;background:color-mix(in srgb,var(--ink) 43%,transparent)}
+ .ms-context{position:fixed;z-index:52;inset:auto 0 0;width:100%;height:min(82dvh,760px);min-height:0;border:0;border-top:1px solid var(--line);box-shadow:0 -20px 70px color-mix(in srgb,var(--ink) 19%,transparent);padding-bottom:env(safe-area-inset-bottom)}
+ .ms-context-head{padding:20px 22px 14px}.ms-context-close{width:44px;height:44px}.ms-context-scroll{padding:0 22px 22px}.ms-tabs{padding:0 22px}
  .ms-document-inner{width:min(100%,var(--ms-column-width))}
 }
 @media(max-width:620px){
  .manuscript-studio{padding-left:15px;padding-right:15px}.ms-intro-copy h1{font-size:38px}.ms-intro-copy p{font-size:12px}.ms-intro-aside{font-size:11px}
- .ms-commandbar{gap:8px;min-height:48px;overflow-x:auto;scrollbar-width:none}.ms-commandbar::-webkit-scrollbar{display:none}.ms-command-group,.ms-command-group:first-child{padding:5px 9px 5px 0;border:0}.ms-command-group>button{font-size:11px;gap:5px;min-height:38px}.ms-width-control{display:none}.ms-view-command{margin-left:0}
+ .ms-commandbar{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;min-height:0}.ms-command-group,.ms-command-group:first-child{padding:4px 8px 4px 0;border:0}.ms-context-command{padding-left:8px;border-left:1px solid var(--line)}.ms-command-group>button{font-size:12px;gap:5px;min-height:44px;white-space:normal;text-align:left}.ms-width-control{display:none}.ms-view-command{grid-column:1/-1;margin-left:0;border-top:1px solid var(--line)}
  .ms-document-top{padding:13px 16px;font-size:11px}.ms-document-top span:last-child{display:none}.ms-document-inner{padding:28px 18px 18px}.ms-title{font-size:29px}.ms-divider{margin:6px 0 23px}.ms-body{min-height:60dvh;height:65dvh}.ms-document-foot{padding:12px 16px}
  .manuscript-focus .manuscript-studio{padding:0 8px 18px}.manuscript-focus .ms-commandbar{margin:0 0 4px}.manuscript-focus .ms-document-inner{padding:18px 12px}.manuscript-focus .ms-body{height:calc(100dvh - 230px);min-height:calc(100dvh - 230px)}
 }

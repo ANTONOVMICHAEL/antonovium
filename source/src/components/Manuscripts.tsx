@@ -1,40 +1,182 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useApp } from '../context';
 import { useCloud } from '../cloud';
+import { useLocalBooks } from '../localBooks';
 import { downloadFile } from '../storage';
-import { Arrow, Label } from './UI';
 import type { Note } from '../types';
+import './manuscript-studio.css';
 
-export default function Manuscripts(){
- const {state,update,toast,openSource}=useApp();
- const cloud=useCloud();
- const [showNotes,setShowNotes]=useState(true),[focus,setFocus]=useState(false),[noteQuery,setNoteQuery]=useState('');
- const [columnWidth,setColumnWidth]=useState(()=>{const width=Number(localStorage.getItem('antonovium.manuscript.width'));return width>=580&&width<=940?width:740});
- const editor=useRef<HTMLTextAreaElement>(null),caret=useRef({start:-1,end:-1});
- const isDemo=state.manuscript.startsWith('Демонстрационная рукопись');
- const notes=state.notes.filter(note=>`${note.title} ${note.body}`.toLocaleLowerCase('ru').includes(noteQuery.trim().toLocaleLowerCase('ru'))).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
- useEffect(()=>{document.documentElement.classList.toggle('manuscript-focus',focus);return()=>document.documentElement.classList.remove('manuscript-focus')},[focus]);
- useEffect(()=>{if(!focus)return;const key=(e:KeyboardEvent)=>{if(e.key==='Escape')setFocus(false)};document.addEventListener('keydown',key);return()=>document.removeEventListener('keydown',key)},[focus]);
- function insert(note:Note){
-  const at=caret.current.start>=0&&caret.current.start<=state.manuscript.length?caret.current:{start:state.manuscript.length,end:state.manuscript.length};
-  const insertion=`\n\n${note.demo?'[Демонстрационная заметка] ':''}${note.title}\n${note.body}\n`;
-  update(s=>({...s,manuscript:s.manuscript.slice(0,at.start)+insertion+s.manuscript.slice(at.end)}));
-  const pos=at.start+insertion.length;caret.current={start:pos,end:pos};
-  requestAnimationFrame(()=>{editor.current?.focus();editor.current?.setSelectionRange(pos,pos)});
-  toast('Запись вставлена в рукопись');
- }
- return <main className={`page manuscript-page manuscript-v2 page-enter ${focus?'editor-focus':''}`} id="main">
-  <div className="page-topline"><Label>Научный редактор</Label><span>{isDemo?'Демонстрационная заготовка':'Моя рукопись'}</span></div>
-  <div className="manuscript-v2-top"><div><Label>Текст в работе</Label><h1>Рукопись<span className="title-period">.</span></h1></div><div className="manuscript-v2-actions"><button className="text-link" onClick={()=>setFocus(v=>!v)} aria-pressed={focus}>{focus?'Выйти из режима письма':'Режим письма'}</button><button className="text-link" onClick={()=>setShowNotes(v=>!v)} aria-pressed={showNotes}>{showNotes?'Скрыть записи':'Показать записи'}</button><button className="button outline" onClick={()=>{downloadFile('ANTONOVIUM_Manuscript.md',`# ${state.manuscriptTitle}\n\n${state.manuscript}`);toast('Рукопись экспортирована')}}>Экспорт текста <Arrow diagonal/></button></div></div>
-  <div className="manuscript-v2-settings"><label>Ширина строки <input aria-label="Ширина текстовой колонки" type="range" min="580" max="940" step="20" value={columnWidth} onChange={e=>{const width=Number(e.target.value);setColumnWidth(width);localStorage.setItem('antonovium.manuscript.width',String(width))}}/></label><span>Текст и заголовок сохраняются по мере набора</span></div>
-  <div className={`manuscript-v2-layout ${showNotes&&!focus?'with-notes':''}`}>
-   <section className="manuscript-v2-sheet" aria-label="Текст рукописи" style={{'--manuscript-width':`${columnWidth}px`} as React.CSSProperties}>
-    <label className="sr-only" htmlFor="manuscript-title">Название рукописи</label><textarea id="manuscript-title" className="manuscript-v2-title" rows={2} value={state.manuscriptTitle} onChange={e=>update({manuscriptTitle:e.target.value})} placeholder="Название рукописи" maxLength={240}/>
-    <div className="manuscript-v2-rule"/>
-    <label className="sr-only" htmlFor="manuscript-body">Текст рукописи</label><textarea ref={editor} id="manuscript-body" className="manuscript-v2-body" value={state.manuscript} onChange={e=>update({manuscript:e.target.value})} onSelect={e=>{caret.current={start:e.currentTarget.selectionStart,end:e.currentTarget.selectionEnd}}} spellCheck style={{fontSize:state.fontSize,lineHeight:state.lineHeight}} placeholder="Начни писать…"/>
-    <div className="manuscript-v2-foot"><span className="save-indicator"/><span>Автосохранение на этом устройстве</span>{cloud.authorized&&<span>· Облако: {cloud.status||'состояние синхронизации уточняется'}</span>}</div>
-   </section>
-   {showNotes&&!focus&&<aside className="manuscript-v2-notes" aria-label="Исследовательские записи"><div className="manuscript-v2-noteshead"><Label>Рядом с текстом</Label><h2>Записи</h2><p>Вставь заметку в позицию курсора или вернись к ее источнику.</p><input type="search" value={noteQuery} onChange={e=>setNoteQuery(e.target.value)} placeholder="Поиск по записям" aria-label="Поиск по записям"/></div><div className="manuscript-v2-notelist">{notes.length?notes.map(note=><article key={note.id} className="manuscript-v2-note"><span>{note.demo?'Демонстрационная запись':'Собственная запись'} · {note.kind==='thesis'?'тезис':note.kind==='question'?'вопрос':'мысль'}</span><h3>{note.title}</h3>{note.body&&<p>{note.body}</p>}<div><button onClick={()=>insert(note)}>Вставить в текст <Arrow/></button>{note.sourceId&&<button onClick={()=>openSource(note.sourceId!,note.sectionId,note.anchors?.[0]?.paragraphId)}>Открыть источник ↗</button>}</div></article>):<p className="manuscript-v2-empty">Записей по запросу пока нет.</p>}</div></aside>}
-  </div>
- </main>
+type Panel = 'notes' | 'sources' | 'outline';
+const POSITION_KEY = 'antonovium.manuscript.editor-position';
+
+export default function Manuscripts() {
+  const { state, update, toast, openSource } = useApp();
+  const cloud = useCloud();
+  const local = useLocalBooks();
+  const [showContext, setShowContext] = useState(() => window.matchMedia('(min-width: 900px)').matches);
+  const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 899px)').matches);
+  const [focus, setFocus] = useState(false);
+  const [panel, setPanel] = useState<Panel>('notes');
+  const [noteQuery, setNoteQuery] = useState('');
+  const [columnWidth, setColumnWidth] = useState(() => {
+    const width = Number(localStorage.getItem('antonovium.manuscript.width'));
+    return width >= 580 && width <= 940 ? width : 740;
+  });
+  const editor = useRef<HTMLTextAreaElement>(null);
+  const contextRef = useRef<HTMLElement>(null);
+  const caret = useRef({ start: -1, end: -1 });
+  const isDemo = state.manuscript.startsWith('Демонстрационная рукопись');
+  const query = noteQuery.trim().toLocaleLowerCase('ru');
+  const notes = useMemo(() => state.notes
+    .filter(note => `${note.title} ${note.body}`.toLocaleLowerCase('ru').includes(query))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [state.notes, query]);
+  const sources = useMemo(() => {
+    const ids = new Set(state.notes.map(note => note.sourceId).filter((id): id is string => Boolean(id)));
+    return [...state.sources, ...local.books, ...cloud.books].filter(source => ids.has(source.id));
+  }, [state.notes, state.sources, local.books, cloud.books]);
+  const outline = useMemo(() => {
+    const result: { title: string; start: number; level: number }[] = [];
+    const re = /^(#{1,4}\s+.+|(?:ГЛАВА|Глава|§)\s*\S.*|\d+(?:\.\d+)*\.?\s+[^\n]{4,100})$/gm;
+    for (const match of state.manuscript.matchAll(re)) {
+      result.push({ title: match[0].replace(/^#{1,4}\s+/, ''), start: match.index ?? 0, level: match[0].startsWith('#') ? match[0].match(/^#+/)![0].length : 1 });
+    }
+    return result;
+  }, [state.manuscript]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('manuscript-focus', focus);
+    return () => document.documentElement.classList.remove('manuscript-focus');
+  }, [focus]);
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 899px)');
+    const change = (event: MediaQueryListEvent) => {
+      setCompact(event.matches);
+      setShowContext(!event.matches);
+    };
+    media.addEventListener('change', change);
+    return () => media.removeEventListener('change', change);
+  }, []);
+  useEffect(() => {
+    if (!compact || !showContext || focus) return;
+    const prior = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    contextRef.current?.querySelector<HTMLElement>('.ms-context-close')?.focus();
+    const trap = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab' || !contextRef.current) return;
+      const controls = Array.from(contextRef.current.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), summary, [tabindex="0"]'))
+        .filter(element => element.getClientRects().length > 0);
+      const first = controls[0], last = controls.at(-1);
+      if (!first || !last) return;
+      if (event.shiftKey && (document.activeElement === first || !contextRef.current.contains(document.activeElement))) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !contextRef.current.contains(document.activeElement))) {
+        event.preventDefault(); first.focus();
+      }
+    };
+    document.addEventListener('keydown', trap);
+    return () => {
+      document.removeEventListener('keydown', trap);
+      document.body.style.overflow = previousOverflow;
+      if (prior?.isConnected) prior.focus();
+    };
+  }, [compact, showContext, focus]);
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (showContext) setShowContext(false);
+      else if (focus) setFocus(false);
+    };
+    document.addEventListener('keydown', key);
+    return () => document.removeEventListener('keydown', key);
+  }, [focus, showContext]);
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(POSITION_KEY) || '{}') as { start?: number; end?: number; scroll?: number };
+      if (typeof saved.start === 'number' && typeof saved.end === 'number') {
+        caret.current = { start: saved.start, end: saved.end };
+        editor.current?.setSelectionRange(saved.start, saved.end);
+      }
+      if (typeof saved.scroll === 'number' && editor.current) editor.current.scrollTop = saved.scroll;
+    } catch { /* Working position is optional when browser storage is restricted. */ }
+  }, []);
+
+  function rememberPosition() {
+    if (!editor.current) return;
+    const { selectionStart: start, selectionEnd: end, scrollTop: scroll } = editor.current;
+    caret.current = { start, end };
+    try { sessionStorage.setItem(POSITION_KEY, JSON.stringify({ start, end, scroll })); } catch { /* Optional working context. */ }
+  }
+  function jump(start: number) {
+    setShowContext(false);
+    requestAnimationFrame(() => {
+      editor.current?.focus();
+      editor.current?.setSelectionRange(start, start);
+      caret.current = { start, end: start };
+      rememberPosition();
+    });
+  }
+  function insert(note: Note) {
+    const at = caret.current.start >= 0 && caret.current.start <= state.manuscript.length
+      ? caret.current : { start: state.manuscript.length, end: state.manuscript.length };
+    const insertion = `\n\n${note.demo ? '[Демонстрационная заметка] ' : ''}${note.title}\n${note.body}\n`;
+    update(s => ({ ...s, manuscript: s.manuscript.slice(0, at.start) + insertion + s.manuscript.slice(at.end) }));
+    const pos = at.start + insertion.length;
+    caret.current = { start: pos, end: pos };
+    setShowContext(false);
+    requestAnimationFrame(() => {
+      editor.current?.focus();
+      editor.current?.setSelectionRange(pos, pos);
+      rememberPosition();
+    });
+    toast('Запись вставлена в рукопись');
+  }
+  function toggleFocus() {
+    if (!focus) { setShowContext(false); setFocus(true); }
+    else setFocus(false);
+    requestAnimationFrame(() => editor.current?.focus());
+  }
+  function exportText() {
+    downloadFile('ANTONOVIUM_Manuscript.md', `# ${state.manuscriptTitle}\n\n${state.manuscript}`);
+    toast('Рукопись экспортирована');
+  }
+
+  return <main className={`page manuscript-studio page-enter ${focus ? 'editor-focus' : ''}`} id="main">
+    <header className="ms-intro">
+      <div className="ms-intro-copy"><span className="ms-kicker">06 / РАБОЧИЙ ТЕКСТ</span><h1>Научный редактор<span aria-hidden="true">.</span></h1><p>Здесь мысль остается твоей. Продолжай рукопись, сверяясь с записями и источниками.</p></div>
+      <div className="ms-intro-aside"><span>{isDemo ? 'Демонстрационная заготовка' : 'Личная рукопись'}</span><span className="ms-status"><i aria-hidden="true"/>Изменения сохраняются при вводе{cloud.authorized ? ` · облако: ${cloud.status || 'состояние уточняется'}` : ' · на устройстве'}</span></div>
+    </header>
+
+    <div className="ms-commandbar" aria-label="Инструменты редактора">
+      <div className="ms-command-group"><span>Рукопись</span><button type="button" onClick={exportText}>Экспорт <span aria-hidden="true">↗</span></button></div>
+      <div className="ms-command-group ms-context-command"><span>Рабочий контекст</span><button type="button" aria-expanded={showContext && !focus} onClick={() => { if (focus) setFocus(false); setShowContext(v => !v); }}>{showContext && !focus ? 'Скрыть материалы' : 'Открыть материалы'} <span aria-hidden="true">{showContext && !focus ? '−' : '+'}</span></button></div>
+      <div className="ms-command-group ms-view-command"><span>Вид текста</span><label className="ms-width-control">Ширина <input aria-label="Ширина текстовой колонки" type="range" min="580" max="940" step="20" value={columnWidth} onChange={e => { const width = Number(e.target.value); setColumnWidth(width); localStorage.setItem('antonovium.manuscript.width', String(width)); }} /></label><button type="button" className={focus ? 'is-active' : ''} aria-pressed={focus} onClick={toggleFocus}>{focus ? 'Выйти из режима письма' : 'Режим письма'} <span aria-hidden="true">⤢</span></button></div>
+    </div>
+
+    <div className={`ms-workspace ${showContext && !focus ? 'has-context' : ''}`}>
+      <section className="ms-document" aria-label="Текст рукописи" style={{ '--ms-column-width': `${columnWidth}px` } as CSSProperties}>
+        <div className="ms-document-top"><span>РУКОПИСЬ / 01</span><span>СОБСТВЕННЫЙ ТЕКСТ</span></div>
+        <div className="ms-document-inner">
+          <label className="ms-field-label" htmlFor="ms-title">Название работы</label>
+          <textarea id="ms-title" className="ms-title" rows={2} value={state.manuscriptTitle} onChange={e => update({ manuscriptTitle: e.target.value })} placeholder="Название рукописи" maxLength={240}/>
+          <div className="ms-divider"/>
+          <label className="ms-field-label" htmlFor="ms-body">Текст рукописи</label>
+          <textarea ref={editor} id="ms-body" className="ms-body" value={state.manuscript} onChange={e => { update({ manuscript: e.target.value }); rememberPosition(); }} onSelect={rememberPosition} onScroll={rememberPosition} onBlur={rememberPosition} spellCheck style={{ fontSize: state.fontSize, lineHeight: state.lineHeight }} placeholder="Начни писать…"/>
+        </div>
+        <footer className="ms-document-foot"><span><i aria-hidden="true"/>Автосохранение{cloud.authorized ? ` · ${cloud.status || 'проверка облака'}` : ' на устройстве'}</span><span>{state.manuscript.trim().split(/\s+/).filter(Boolean).length.toLocaleString('ru-RU')} слов</span></footer>
+      </section>
+
+      {showContext && !focus && <><button className="ms-context-scrim" type="button" aria-label="Закрыть исследовательские материалы" onClick={() => setShowContext(false)} />
+        <aside ref={contextRef} className="ms-context" role={compact ? 'dialog' : undefined} aria-modal={compact ? 'true' : undefined} aria-label="Исследовательские материалы">
+          <div className="ms-context-head"><div><span className="ms-kicker">ПОД РУКОЙ</span><h2>Контекст</h2></div><button className="ms-context-close" type="button" aria-label="Закрыть исследовательские материалы" onClick={() => setShowContext(false)}>×</button></div>
+          <div className="ms-tabs" role="group" aria-label="Материалы к рукописи">{([['notes', 'Записи'], ['sources', 'Источники'], ['outline', 'Структура']] as const).map(([key, label]) => <button key={key} type="button" aria-pressed={panel === key} className={panel === key ? 'active' : ''} onClick={() => setPanel(key)}>{label}</button>)}</div>
+          <div className="ms-context-scroll">
+            {panel === 'notes' && <><p className="ms-panel-intro">Вставь запись в позицию курсора или вернись к первоисточнику.</p><label className="ms-search"><span className="sr-only">Поиск по записям</span><input type="search" value={noteQuery} onChange={e => setNoteQuery(e.target.value)} placeholder="Найти запись"/></label>
+              <div className="ms-note-list">{notes.length ? notes.map(note => <article key={note.id} className="ms-note"><span className="ms-note-meta">{note.demo ? 'Демонстрационная' : 'Собственная'} · {note.kind === 'thesis' ? 'тезис' : note.kind === 'question' ? 'вопрос' : 'мысль'}</span><h3>{note.title}</h3>{note.body && <p>{note.body}</p>}<div className="ms-note-actions"><button type="button" onClick={() => insert(note)}>Вставить в текст <span aria-hidden="true">↗</span></button>{note.sourceId && <button type="button" onClick={() => openSource(note.sourceId!, note.sectionId, note.anchors?.[0]?.paragraphId)}>К источнику <span aria-hidden="true">↗</span></button>}</div></article>) : <p className="ms-empty">{query ? 'Записей по запросу нет.' : 'Пока нет исследовательских записей.'}</p>}</div></>}
+            {panel === 'sources' && <><p className="ms-panel-intro">Источники, к которым привязаны твои записи. Открой книгу для проверки фрагмента.</p>{sources.length ? sources.map(source => <button type="button" className="ms-source" key={source.id} onClick={() => openSource(source.id)}><span>{'demo' in source && source.demo ? 'Демонстрационный источник' : source.author || 'Источник'}</span><strong>{source.title}</strong><small>Открыть в читальном зале ↗</small></button>) : <p className="ms-empty">Связанных источников пока нет. Привяжи запись к книге в читальном зале.</p>}</>}
+            {panel === 'outline' && <><p className="ms-panel-intro">Заголовки определяются по строкам с «#», «Глава», «§» или номером раздела.</p>{outline.length ? outline.map((item, index) => <button type="button" key={`${item.start}-${index}`} className="ms-outline-item" style={{ paddingLeft: `${Math.min(item.level - 1, 3) * 14}px` }} onClick={() => jump(item.start)}><span>{String(index + 1).padStart(2, '0')}</span><strong>{item.title}</strong></button>) : <p className="ms-empty">В тексте пока нет распознанных заголовков.</p>}</>}
+          </div>
+        </aside></>}
+    </div>
+  </main>;
 }
