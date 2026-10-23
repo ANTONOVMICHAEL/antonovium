@@ -13,9 +13,10 @@ export const defaultState: SavedState = {
   notes:demoNotes, sources:demoSources, research:demoResearch,
   manuscriptTitle:'Критерии разграничения: рабочие записи',
   manuscript:'Демонстрационная рукопись\n\nСформулировать основания сравнения смежных понятий.\n\nМатериалы читального зала в этой версии являются демонстрационными; использовать их как научные источники нельзя.\n\nМесто для собственных тезисов и проверенных ссылок.\n',
-  wilkinsActivity:'adaptive', compareSourceId:'qualification', compareSectionId:'q1', categoryId:'badfaith', researchId:'r1'
+  wilkinsActivity:'adaptive', compareSourceId:'qualification', compareSectionId:'q1', categoryId:'badfaith', researchId:'r1',
+  desk:{leftId:'boundaries',rightId:'qualification',leftSectionId:'s1',rightSectionId:'q1',ratio:.5,active:'left',researchId:'r1'}
 };
-const screens=['cabinet','library','reader','atlas','lab','manuscripts','horizon','archive'];
+const screens=['cabinet','library','reader','desk','atlas','lab','manuscripts','horizon','archive'];
 export function decodeState(value:unknown): SavedState {
   if(!value||typeof value!=='object'||(value as SavedState).version!==1) throw new Error('Неподдерживаемый формат данных. Нужен экспорт ANTONOVIUM версии 1.');
   const s=value as SavedState;
@@ -36,6 +37,13 @@ export function decodeState(value:unknown): SavedState {
     compareExcerpt:s.compareExcerpt&&typeof s.compareExcerpt.quote==='string'&&typeof s.compareExcerpt.sourceId==='string'&&Array.isArray(s.compareExcerpt.anchors)&&s.compareExcerpt.anchors.every(a=>a&&typeof a.paragraphId==='string'&&Number.isInteger(a.start)&&Number.isInteger(a.end)&&a.start>=0&&a.end>=a.start)?s.compareExcerpt:undefined,
     manuscript:typeof s.manuscript==='string'?s.manuscript:defaultState.manuscript,manuscriptTitle:typeof s.manuscriptTitle==='string'?s.manuscriptTitle:defaultState.manuscriptTitle,
     wilkinsActivity:['request','adaptive','active'].includes(s.wilkinsActivity)?s.wilkinsActivity:'adaptive',
+    desk:s.desk&&typeof s.desk.leftId==='string'&&typeof s.desk.rightId==='string'?{
+      leftId:s.desk.leftId,rightId:s.desk.rightId,
+      leftSectionId:typeof s.desk.leftSectionId==='string'?s.desk.leftSectionId:undefined,
+      rightSectionId:typeof s.desk.rightSectionId==='string'?s.desk.rightSectionId:undefined,
+      ratio:Math.max(.3,Math.min(.7,Number(s.desk.ratio)||.5)),
+      active:s.desk.active==='right'?'right':'left',
+      researchId:typeof s.desk.researchId==='string'?s.desk.researchId:undefined}:structuredClone(defaultState.desk),
     wide:!!s.wide,quiet:!!s.quiet, sources:s.sources as Source[],notes:s.notes as Note[],research:s.research as Research[]};
 }
 export function useWorkspace(storageKey=STORAGE_KEY){

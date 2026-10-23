@@ -31,9 +31,11 @@ try{
  offline=true;await edit('A',s=>({...s,notes:[...s.notes,{...note,id:'offline-note',body:'Без связи'}]}));assert.equal(rows.has('note:offline-note'),false);assert.ok(probes.A.state.notes.some(n=>n.id==='offline-note'));offline=false;await act(async()=>await probes.A.sync.flush());assert.equal(rows.get('note:offline-note').data.body,'Без связи');console.log('PASS offline edits upload after reconnection');
  await edit('A',s=>({...s,notes:s.notes.filter(n=>n.id!==note.id)}));await act(async()=>await probes.B.sync.flush());assert.equal(probes.B.state.notes.some(n=>n.id===note.id),false);assert.equal(rows.get('note:shared-note').data.deleted,true);console.log('PASS deletions propagate without resurrection');
  await edit('A',s=>({...s,positions:{...s.positions,'source:chapter':420}}));await act(async()=>await probes.B.sync.flush());assert.equal(probes.B.state.positions['source:chapter'],420);console.log('PASS text reading position syncs');
+ await edit('A',s=>({...s,desk:{...s.desk,leftId:'qualification',rightId:'boundaries',ratio:.62,active:'right'}}));
+ await act(async()=>await probes.B.sync.flush());assert.equal(probes.B.state.desk.leftId,'qualification');assert.equal(probes.B.state.desk.ratio,.62);console.log('PASS research desk composition reaches second device');
  const before=saves;await act(async()=>{await probes.A.sync.flush();await probes.B.sync.flush()});assert.equal(saves,before);console.log('PASS unchanged state creates no writes');
  assert.equal(unchanged({},'note:x',{kind:'note',data:{deleted:true}}),true);assert.deepEqual(localValue({},'note:x',{kind:'note',data:note}),{deleted:true});
- console.log('8 integration scenarios passed with two independent React workspaces and a simulated transport.');
+ console.log('9 integration scenarios passed with two independent React workspaces and a simulated transport.');
 }finally{const {act}=await import('react');await act(async()=>{for(const root of roots)root.unmount()});await vite.close();await w.happyDOM.close()}
 process.exit(0);
 

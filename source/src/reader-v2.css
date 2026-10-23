@@ -1,0 +1,305 @@
+/* Reading surfaces use the same semantic tokens as the rest of the laboratory. */
+.reader-application.cloud-reading {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+}
+
+.cloud-reading .cloud-reader {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.cloud-reader .reader-workspace {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.cloud-reader .cloud-book-scroll {
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cloud-reader .cloud-book-scroll.cloud-format-fb2.cloud-layout-scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.cloud-reader .fb2-document {
+  width: 100%;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.cloud-reader .fb2-document :is(p, blockquote, section, div, a) {
+  max-width: 100%;
+}
+
+.cloud-reader .fb2-document :is(img, svg) {
+  display: block;
+  max-width: 100%;
+  max-height: min(72dvh, 760px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin-inline: auto;
+}
+
+.cloud-reader .fb2-document table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: normal;
+}
+
+.cloud-reader .cloud-book-scroll.cloud-format-fb2.cloud-layout-pages {
+  width: min(100%, 860px);
+  margin-inline: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0;
+  scrollbar-width: none;
+  scroll-behavior: auto;
+  overscroll-behavior-x: contain;
+}
+
+.cloud-reader .fb2-document.paged-text,
+.cloud-reader .fb2-document.wide-text.paged-text {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+  padding: 18px 24px 28px;
+  column-width: var(--page-width);
+  column-gap: 48px;
+  column-fill: auto;
+  overflow: visible;
+}
+
+.cloud-reader .fb2-document.paged-text :is(h2, h3, h4) {
+  break-after: avoid-column;
+}
+
+.cloud-reader .fb2-document.paged-text :is(img, table, blockquote) {
+  break-inside: avoid-column;
+  max-height: max(120px, calc(100dvh - 190px));
+}
+
+.cloud-reader .fb2-document.paged-text table {
+  break-inside: auto;
+  max-height: none;
+}
+
+.cloud-reader .cloud-book-scroll.cloud-format-pdf {
+  overflow: auto;
+  min-width: 0;
+}
+
+.cloud-reader .cloud-pdf-continuous,
+.cloud-reader .cloud-scroll-page-shell {
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
+}
+
+.cloud-reader .cloud-pdf-page {
+  max-width: none;
+  flex: none;
+}
+
+.cloud-reader .cloud-pdf-page canvas,
+.cloud-reader .cloud-pdf-page .textLayer {
+  max-width: none;
+}
+
+.cloud-reader .cloud-pdf-note-marker {
+  right: 2px;
+  min-width: 36px;
+  min-height: 36px;
+}
+
+.cloud-reader .cloud-reader-menu {
+  min-width: 44px;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+.cloud-reader .cloud-reader-chrome {
+  max-height: min(72dvh, 560px);
+  overscroll-behavior: contain;
+}
+
+.cloud-reader .cloud-reader-chrome .contents-drawer {
+  max-height: 100dvh;
+  overscroll-behavior: contain;
+}
+
+.cloud-reader .cloud-page-turn {
+  touch-action: manipulation;
+}
+
+.reader-context-close,
+.reader-notes-toggle,
+.reader-notes-backdrop {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .cloud-reading > .app-header {
+    display: none;
+  }
+
+  .cloud-reader .cloud-reader-menu {
+    top: max(8px, env(safe-area-inset-top));
+    right: max(8px, env(safe-area-inset-right));
+  }
+
+  .cloud-reader .cloud-reader-chrome {
+    padding: calc(8px + env(safe-area-inset-top)) 58px 14px max(14px, env(safe-area-inset-left));
+    max-height: 78dvh;
+  }
+
+  .cloud-reader .cloud-reader-chrome .reader-source-title {
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .cloud-reader .cloud-reader-chrome .contents-drawer {
+    padding: calc(20px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .cloud-reader .cloud-book-scroll.cloud-format-fb2.cloud-layout-scroll {
+    padding: 0;
+  }
+
+  .cloud-reader .fb2-document {
+    padding: 16px max(18px, env(safe-area-inset-left)) calc(42px + env(safe-area-inset-bottom));
+  }
+
+  .cloud-reader .fb2-document.paged-text,
+  .cloud-reader .fb2-document.wide-text.paged-text {
+    padding: 14px 24px calc(18px + env(safe-area-inset-bottom));
+    column-width: var(--page-width);
+    column-gap: 48px;
+  }
+
+  .cloud-reader .cloud-book-scroll.cloud-format-pdf {
+    padding: 8px 8px calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .cloud-reader .cloud-page-turn {
+    pointer-events: none;
+  }
+
+  .cloud-reader .cloud-navigation {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+
+  .reader-application:not(.cloud-reading) .reader {
+    min-height: 0;
+  }
+
+  .reader-application:not(.cloud-reading) .reader-workspace.mode-research {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    position: relative;
+  }
+
+  .reader-application:not(.cloud-reading) .reader-workspace.mode-research .reader-scroll {
+    min-height: 0;
+    height: 100%;
+  }
+
+  .reader-application:not(.cloud-reading) .reader-workspace.mode-research .context-panel {
+    display: none;
+  }
+
+  .reader-application:not(.cloud-reading) .reader-workspace.mode-research .context-panel.mobile-open {
+    display: flex;
+    position: absolute;
+    z-index: 14;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: min(58dvh, 480px);
+    min-height: 230px;
+    max-height: none;
+    background: var(--paper);
+    box-shadow: 0 -12px 35px #0002;
+  }
+
+  .reader-notes-toggle,
+  .reader-context-close,
+  .reader-notes-backdrop {
+    display: block;
+  }
+
+  .reader-context-close {
+    margin-left: auto;
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 25px;
+  }
+
+  .reader-notes-backdrop {
+    position: absolute;
+    z-index: 13;
+    inset: 0;
+    width: 100%;
+    background: #0005;
+  }
+
+  .reader-application:not(.cloud-reading) .reader-toolbar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 58px;
+    gap: 5px;
+    padding: 7px 0;
+  }
+
+  .reader-application:not(.cloud-reading) .reader-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .reader-application:not(.cloud-reading) .reader-controls .text-button {
+    min-height: 40px;
+  }
+
+  .reader-application:not(.cloud-reading) .document {
+    padding: 30px 30px 36px;
+  }
+
+  .reader-application:not(.cloud-reading) .paragraph-action {
+    position: static;
+    display: inline-flex;
+    opacity: 1;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 5px;
+  }
+}
+
+@media (max-width: 390px) {
+  .reader-application:not(.cloud-reading) .document {
+    padding-inline: 24px;
+  }
+
+  .cloud-reader .cloud-reader-chrome .reader-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cloud-reader .cloud-reader-chrome,
+  .reader-application .reader-workspace {
+    animation: none;
+    transition-duration: 0.01ms;
+  }
+}
