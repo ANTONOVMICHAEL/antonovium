@@ -1,0 +1,70 @@
+{
+  "release": "Научная память 1.0",
+  "date": "2026-10-24",
+  "base_commit": "6bdc92d066b189998e732f7f13d158c571e568b9",
+  "tested_code_commit": "ad937021a3a84b8ae8aad631375ca4805e103359",
+  "backup_branch": "backup/before-memory-20261024",
+  "working_branch": "feat/scientific-memory-1",
+  "automated": {
+    "typecheck": "passed",
+    "production_build": "passed",
+    "workspace_regression": 19,
+    "cloud_modules": 10,
+    "pdf_range_and_rendering": 4,
+    "sync_simulated_workspaces": 9,
+    "gesture_assertions": 15,
+    "memory_domain": 22,
+    "memory_index": 11,
+    "quotation_anchors": "passed",
+    "cards_components": 8,
+    "reader_components": 8,
+    "promotion_privacy": "3 groups passed",
+    "fb2_phone_and_column_geometry": "passed"
+  },
+  "github_ci": {
+    "url": "https://github.com/ANTONOVMICHAEL/antonovium/actions/runs/40103603721",
+    "conclusion": "success",
+    "clean_install": true,
+    "production_reproduction": "dist/index.html and every dist/assets file compared byte-for-byte against staged GitHub Pages files"
+  },
+  "database": {
+    "migrations": [
+      "20261024140809_scientific_memory",
+      "20261024142250_memory_search_phrases",
+      "20261024142732_memory_book_lookup"
+    ],
+    "rls_assertions": 66,
+    "rls_scope": "Two synthetic database identities and anonymous/disabled roles inside a rolled-back transaction; no real user records used",
+    "remaining_synthetic_accounts": 0,
+    "anonymous_rest_search": {
+      "http": 401,
+      "sqlstate": "42501"
+    },
+    "new_security_advisories": 0
+  },
+  "browser": {
+    "engine": "Chromium",
+    "widths": [
+      360,
+      390,
+      430,
+      768,
+      1280
+    ],
+    "memory_checks": 36,
+    "memory_passed": true,
+    "memory_report": "memory-browser-validation.json",
+    "reader_report": "memory-reader-browser-validation.json",
+    "synthetic_gestures": true,
+    "reader_checks": 101,
+    "reader_passed": true,
+    "single_taps": 600
+  },
+  "limitations": [
+    "Physical iOS Safari and WebKit were not available in this environment.",
+    "Two genuine signed-in browser sessions were unavailable. Database RLS and two independent React workspaces with simulated sync transport were tested separately.",
+    "Scanned PDF has no OCR and is honestly marked no_text or partial.",
+    "Initial safe FB2 XML parsing remains synchronous and bounded by existing parser limits; subsequent extraction and indexing yield incrementally.",
+    "Cloud raw indexed text has a 64 MiB application budget per owner, separate from Supabase billing/storage quotas; no tariff was changed."
+  ]
+}
