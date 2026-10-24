@@ -26,7 +26,7 @@ jobs:
       - name: TypeScript and production build
         run: npm run build
       - name: Reader contact recognizer
-        run: npm run test:reader-gestures
+        run: node scripts/test-reader-gestures.mjs
       - name: Real phone-width FB2 page geometry
         run: node scripts/test-fb2-phone-pages.mjs
       - name: Existing workspace regression
