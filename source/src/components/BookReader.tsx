@@ -144,7 +144,13 @@ export default function BookReader({book}:{book:Book}){
    if(other)move({format:'fb2',chapter:other.id},direction<0);return;
   }
   const epoch=++positionEpoch.current;restoring.current=true;
-  frame.scrollLeft=Math.max(0,Math.min(geometry.max,(next-1)*geometry.step));
+  if(geometry.vertical){
+   // Mobile FB2 pages advance by one screen of continuous text, never a chapter.
+   frame.scrollLeft=0;
+   frame.scrollTop=Math.max(0,Math.min(geometry.max,(next-1)*geometry.step));
+  }else{
+   frame.scrollLeft=Math.max(0,Math.min(geometry.max,(next-1)*geometry.step));
+  }
   setFb2Page(next);remember(visibleFB2Anchor());
   cancelAnimationFrame(settleFrame.current);
   settleFrame.current=requestAnimationFrame(()=>{
