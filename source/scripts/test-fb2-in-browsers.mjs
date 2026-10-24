@@ -13,7 +13,7 @@ try {
   await server.listen();
   const address = server.httpServer?.address();
   assert.ok(address && typeof address === 'object');
-  const url = `http://127.0.0.1:${address.port}/tests/reader-browser.html`;
+  const url = `http://127.0.0.1:${address.port}/tests/reader-browser.html?fb2-only=1`;
   for (const [engineName, engine] of [['Chromium', chromium], ['WebKit', webkit]]) {
     const browser = await engine.launch({ headless: true });
     try {
