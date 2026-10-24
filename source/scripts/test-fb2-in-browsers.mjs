@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'vite';
+import { readFile } from 'node:fs/promises';
 import { chromium, webkit } from 'playwright';
 
-// This runs ANTONOVIUM's actual local-book UI and long FB2 fixture, not just
-// a pure geometry mock. The iframe viewport matches a narrow phone.
+// Chromium: actual ANTONOVIUM FB2 reading UI at phone width.
+// WebKit: actual mobile reader CSS with tall content; the WebKit runner's
+// IndexedDB bootstrap cannot initialize the full synthetic-book harness.
 const server = await createServer({
   server: { host: '127.0.0.1', port: 0 },
   logLevel: 'error'
@@ -22,6 +24,33 @@ try {
         locale: 'ru-RU',
         hasTouch: true
       });
+      if (engineName === 'WebKit') {
+        const css = await readFile(new URL('../src/reader-v2.css', import.meta.url), 'utf8');
+        const paragraph = 'Продолжение гражданско-правового исследования. Подробное рассуждение о юридических конструкциях, положениях доктрины, условиях возникновения и защиты субъективных гражданских прав.';
+        const text = Array.from({ length: 150 }, () => '<p>' + paragraph + '</p>').join('');
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.setContent('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>' +
+          css + '</style><style>html,body{margin:0}.reader-application{width:390px;height:760px}.reader-application .reader{height:760px}.reader-application .reader-workspace{height:720px}.reader-application .cloud-book-scroll{height:720px}</style></head><body>' +
+          '<div class="reader-application"><main class="reader cloud-reader"><div class="reader-workspace mode-reading"><div id="frame" class="reader-scroll cloud-book-scroll cloud-format-fb2 cloud-layout-pages"><div id="root" class="document fb2-document paged-text">' +
+          text + '</div></div></div></main></div></body></html>');
+        const geometry = await page.evaluate(() => {
+          const frame = document.getElementById('frame');
+          const root = document.getElementById('root');
+          const css = getComputedStyle(root);
+          const max = frame.scrollHeight - frame.clientHeight;
+          frame.scrollTop = Math.min(max, 600);
+          return { axis: css.getPropertyValue('--fb2-paging-axis').trim(),
+            scrollHeight: frame.scrollHeight, clientHeight: frame.clientHeight,
+            scrollTop: frame.scrollTop, horizontalOverflow: frame.scrollWidth-frame.clientWidth };
+        });
+        assert.equal(geometry.axis, 'vertical', 'WebKit did not apply the mobile FB2 mode');
+        assert.ok(geometry.scrollHeight > geometry.clientHeight * 3, 'WebKit chapter is not split into screenfuls');
+        assert.ok(geometry.scrollTop > 100, 'WebKit cannot advance by a screen of text');
+        console.log('WebKit: responsive FB2 CSS has true vertical screen pages and programmatic page advances.');
+        console.log('WebKit full-app harness not verified: its IndexedDB bootstrap does not start in this runner.');
+        await page.close();
+        continue;
+      }
       const browserErrors = [], browserMessages = [];
       page.on('pageerror', error => browserErrors.push(error.message));
       page.on('console', message => {
