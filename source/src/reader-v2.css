@@ -460,7 +460,12 @@
   .cloud-reader-chrome .contents-drawer{padding:calc(20px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom))}
   .cloud-book-scroll.cloud-format-fb2.cloud-layout-scroll{padding:0}
   .fb2-document{max-width:none;padding:18px max(18px,env(safe-area-inset-left)) calc(55px + env(safe-area-inset-bottom));border:0;box-shadow:none}
+  /* Real phone-sized FB2 pages. Never depend on horizontal CSS columns,
+     whose overflow can be reported as a single page on mobile WebKit. */
   .fb2-document.paged-text,.fb2-document.wide-text.paged-text{
+    --fb2-paging-axis:vertical;
+    height:auto;min-height:100%;
+    column-width:auto;column-count:auto;column-fill:balance;
     padding:14px 24px calc(18px + env(safe-area-inset-bottom))
   }
   .cloud-book-scroll.cloud-format-pdf{padding:8px 8px calc(26px + env(safe-area-inset-bottom))}
