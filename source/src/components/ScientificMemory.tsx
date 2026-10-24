@@ -2,6 +2,7 @@ import {useEffect,useMemo,useRef,useState} from 'react';
 import {useApp} from '../context';
 import {fileApi,useCloud,type Book,type FileAnchor} from '../cloud';
 import {readLocalFile,useLocalBooks} from '../localBooks';
+import {sharedBookAliases} from '../bookMigration';
 import {categories,categoryTitle} from '../data';
 import {downloadFile,newId} from '../storage';
 import {decodeXML} from '../fb2';
@@ -108,13 +109,13 @@ export default function ScientificMemory(){
  useEffect(()=>setLimit(50),[view,query,author,sourceId,category,researchId,evidence,from,to]);
  const importInput=useRef<HTMLInputElement>(null);
  const catalog=useMemo(()=>{
-  const map=new Map<string,CatalogEntry>(),stored=state.bibliography??[];
+  const map=new Map<string,CatalogEntry>(),stored=state.bibliography??[],aliases=cloud.authorized?sharedBookAliases(cloud.session?.user.id):{};
   for(const source of state.sources.filter(item=>!item.demo)){const record=getBibliography(source,stored.find(item=>item.sourceId===source.id));map.set(source.id,{id:source.id,title:record.title||source.title,author:record.authors.join('; '),format:source.format,source,record,available:true})}
-  for(const book of [...local.books,...cloud.books]){const record=getBibliography(book,stored.find(item=>item.sourceId===book.id));map.set(book.id,{id:book.id,title:record.title||book.title,author:record.authors.join('; '),format:book.format,fingerprint:book.fingerprint,book,record,available:book.status==='ready'})}
+  for(const book of [...local.books.filter(item=>!aliases[item.id]),...cloud.books]){const record=getBibliography(book,stored.find(item=>item.sourceId===book.id));map.set(book.id,{id:book.id,title:record.title||book.title,author:record.authors.join('; '),format:book.format,fingerprint:book.fingerprint,book,record,available:book.status==='ready'})}
   for(const record of stored)if(!map.has(record.sourceId))map.set(record.sourceId,{id:record.sourceId,title:record.title||'Источник без названия',author:record.authors.join('; '),record,available:false});
   for(const note of state.notes.filter(item=>!item.demo&&item.sourceId))if(!map.has(note.sourceId!)){const record=note.citation?.bibliography??getBibliography({id:note.sourceId!,title:note.sourceTitle??''});map.set(note.sourceId!,{id:note.sourceId!,title:record.title||'Источник недоступен',author:record.authors.join('; '),record,available:false})}
   return [...map.values()].sort((a,b)=>a.title.localeCompare(b.title,'ru'));
- },[state.sources,state.bibliography,state.notes,local.books,cloud.books]);
+ },[state.sources,state.bibliography,state.notes,local.books,cloud.books,cloud.authorized,cloud.session?.user.id]);
  const ownNotes=state.notes.filter(note=>!note.demo),quotations=ownNotes.filter(note=>noteType(note)==='quotation');
  const bibTemplate=state.bibliographicTemplates?.bibliography??state.bibliographyTemplate??defaultBibliographyTemplate,citeTemplate=state.bibliographicTemplates?.citation??defaultCitationTemplate;
  const recordFor=(note:Note)=>catalog.find(item=>item.id===note.sourceId)?.record??note.citation?.bibliography;

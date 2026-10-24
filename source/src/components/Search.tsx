@@ -2,6 +2,7 @@ import {useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import {useApp} from '../context';
 import {useCloud} from '../cloud';
 import {useLocalBooks} from '../localBooks';
+import {sharedBookAliases} from '../bookMigration';
 import {categories} from '../data';
 import {Arrow,Modal} from './UI';
 import {createQuotation,formatBibliography,getBibliography} from '../scientificMemory';
@@ -25,7 +26,8 @@ export default function Search({onClose}:{onClose:()=>void}){
  const cloud=useCloud(),local=useLocalBooks(),documents=useIndexProgress(),owner=cloud.authorized?cloud.session!.user.id:'';
  const [q,setQ]=useState(''),[scope,setScope]=useState<Scope>('all'),[author,setAuthor]=useState(''),[bookId,setBookId]=useState(''),[exact,setExact]=useState(false),[searching,setSearching]=useState(false),[error,setError]=useState(''),[fileResults,setFileResults]=useState<{owner:string;hits:LibraryHit[]}>({owner:'',hits:[]});
  const request=useRef(0),query=exact&&q.trim()?`"${q.replace(/"/g,'').trim()}"`:q.trim(),queryError=(query.match(/"/g)?.length??0)%2?'Закрой кавычки вокруг точной фразы':'';
- const books=useMemo(()=>[...local.books,...cloud.books].map(book=>{const b=state.bibliography?.find(item=>item.sourceId===book.id);return b?{...book,originalAuthor:book.author,title:b.title||book.title,author:b.authors.length?b.authors.join('; '):book.author}:book}),[local.books,cloud.books,state.bibliography]);
+ const books=useMemo(()=>{const aliases=owner?sharedBookAliases(owner):{};return[...local.books.filter(book=>!aliases[book.id]),...(owner?cloud.books:[])].map(book=>{const b=state.bibliography?.find(item=>item.sourceId===book.id);return b?{...book,originalAuthor:book.author,title:b.title||book.title,author:b.authors.length?b.authors.join('; '):book.author}:book})},[local.books,cloud.books,state.bibliography,owner]);
+ useEffect(()=>{const canonical=owner&&sharedBookAliases(owner)[bookId];if(canonical)setBookId(canonical)},[owner,bookId,local.books]);
  const signature=books.map(b=>`${b.id}:${b.fingerprint}:${b.title}:${b.author}`).join('|'),activeDocuments=documents.filter(doc=>books.some(book=>book.id===doc.book_id)),ready=activeDocuments.filter(doc=>doc.chunk_count>0).length;
  const progressSignature=activeDocuments.map(doc=>`${doc.book_id}:${doc.status}:${doc.next_unit}:${doc.chunk_count}`).join('|');
  useEffect(()=>{

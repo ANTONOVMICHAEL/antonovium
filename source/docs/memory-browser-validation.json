@@ -69,7 +69,7 @@
       "name": "pdf: save a quotation through actual search UI",
       "pass": true,
       "detail": {
-        "id": "254ac802-24a85f82-36a60d37-bb5fc035",
+        "id": "dd761d49-5f6aa419-704c0a57-8c41522d",
         "anchor": {
           "format": "pdf",
           "page": 7,
@@ -95,7 +95,7 @@
       "name": "fb2: save a quotation through actual search UI",
       "pass": true,
       "detail": {
-        "id": "c2e8f4f2-782f18a0-1e455817-54c3f440",
+        "id": "fe0fc2d5-758eb872-846d314f-ce58862c",
         "anchor": {
           "format": "fb2",
           "chapter": "fb2-0.1.0",
@@ -403,7 +403,7 @@
       "deviceOnly": true
     }
   },
-  "startedAt": "2026-10-24T14:36:29.781Z",
+  "startedAt": "2026-10-24T14:54:24.231Z",
   "index": {
     "fb2": {
       "book_id": "276cf3ef-870dcbea-dbc3302c-6ec97291",
@@ -503,6 +503,6 @@
       "status": "ready"
     }
   },
-  "finishedAt": "2026-10-24T14:36:46.683Z",
+  "finishedAt": "2026-10-24T14:54:40.733Z",
   "pass": true
 }

@@ -2,7 +2,6 @@
   "release": "Научная память 1.0",
   "date": "2026-10-24",
   "base_commit": "6bdc92d066b189998e732f7f13d158c571e568b9",
-  "tested_code_commit": "ad937021a3a84b8ae8aad631375ca4805e103359",
   "backup_branch": "backup/before-memory-20261024",
   "working_branch": "feat/scientific-memory-1",
   "automated": {
@@ -66,5 +65,14 @@
     "Scanned PDF has no OCR and is honestly marked no_text or partial.",
     "Initial safe FB2 XML parsing remains synchronous and bounded by existing parser limits; subsequent extraction and indexing yield incrementally.",
     "Cloud raw indexed text has a 64 MiB application budget per owner, separate from Supabase billing/storage quotas; no tariff was changed."
-  ]
+  ],
+  "initial_tested_code_commit": "ad937021a3a84b8ae8aad631375ca4805e103359",
+  "follow_up": {
+    "change": "Canonical cloud IDs replace already-promoted local entries in search, indexing and bibliography; a running local job cannot recreate old-ID metadata.",
+    "typecheck": "passed",
+    "memory_regressions": "passed",
+    "browser_memory_checks": 36,
+    "browser_memory_passed": true,
+    "reader_code_changed": false
+  }
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fileApi, supabase, useCloud, type Book, type FileAnchor } from './cloud';
 import { readLocalFile, useLocalBooks } from './localBooks';
+import { sharedBookAliases } from './bookMigration';
 import { decodeXML, parseFB2 } from './fb2';
 import { INDEX_VERSION, INDEX_RAW_BUDGET, matchExcerpt, normalizeSearch, pdfExtractedText, splitLiteral, textMatches, validIndexAnchor, type EmbeddedMetadata, type IndexChunk, type IndexDocument, type IndexProgress, type LibraryHit } from './indexTypes';
 
@@ -68,7 +69,7 @@ function emptyDoc(book: Book, error = ''): IndexDocument { return { book_id: boo
 function completed(doc: IndexDocument, book: Book) { return ['ready','no_text'].includes(doc.status) || book.format==='pdf' && doc.status==='partial' && doc.next_unit===doc.total_units && doc.text_units<doc.total_units; }
 async function indexBook(task: Task, ticket: number) {
   const { book } = task; let doc: IndexDocument | undefined; let pdfTask: { destroy: () => Promise<void> } | undefined;
-  const alive = () => ticket === generation && (book.local || task.owner === activeOwner);
+  const alive = () => ticket === generation && (book.local ? !activeOwner || !sharedBookAliases(activeOwner)[book.id] : task.owner === activeOwner);
   const begin = async (total: number) => book.local ? localBegin(book, total) : rpc<IndexDocument>('av_memory_begin', { p_book_id: book.id, p_fingerprint: book.fingerprint, p_total_units: total, p_format: book.format }, task);
   const put = async (chunks: IndexChunk[], next: number) => {
     if (!alive()) throw Error('Индексирование приостановлено');
@@ -128,7 +129,7 @@ async function indexBook(task: Task, ticket: number) {
     if (alive()) setProgress(task, doc?.status === 'size_limit' ? doc : { ...(doc ?? emptyDoc(book)), status: ticket !== generation ? 'partial' : 'error', error: message });
   } finally { await pdfTask?.destroy().catch(() => {}); }
 }
-async function drain() { if (working) return; working = true; try { while (tasks.length) { const task = tasks.shift()!; try { if (task.book.local || task.owner === activeOwner) await indexBook(task, generation); } finally { if(task.queueKey)scheduled.delete(task.queueKey); } } } finally { working = false; } }
+async function drain() { if (working) return; working = true; try { while (tasks.length) { const task = tasks.shift()!; try { if (task.book.local ? !activeOwner || !sharedBookAliases(activeOwner)[task.book.id] : task.owner === activeOwner) await indexBook(task, generation); } finally { if(task.queueKey)scheduled.delete(task.queueKey); } } } finally { working = false; } }
 export function pauseIndexing() { generation++; tasks = []; scheduled.clear();for (const [key, doc] of progress) if (doc.status === 'processing' || doc.queued) progress.set(key, { ...doc, status: 'partial', queued: false, error: 'Индексирование приостановлено. Продолжи при необходимости.' }); notify(); }
 export async function queueIndexing(books: Book[], options: { owner: string; force?: boolean; onMetadata?: Task['metadata'] }) {
   const ticket=generation;
@@ -156,9 +157,10 @@ export async function queueIndexing(books: Book[], options: { owner: string; for
 }
 export function useLibraryIndexing(onMetadata?: Task['metadata']) {
   const cloud = useCloud(), local = useLocalBooks(); const owner = cloud.authorized ? cloud.session!.user.id : '';
+  const aliases=owner?sharedBookAliases(owner):{},books=[...local.books.filter(book=>!aliases[book.id]),...(owner?cloud.books:[])];
   useEffect(() => { if (activeOwner !== owner) { activeOwner = owner; generation++; tasks = [];scheduled.clear();attempted.clear();notify(); } }, [owner]);
-  const signature = [...cloud.books, ...local.books].map(b => `${b.id}:${b.fingerprint}:${b.status}`).join('|');
-  useEffect(() => { void queueIndexing([...local.books, ...(owner ? cloud.books : [])], { owner, onMetadata }).catch(() => {}); }, [owner, signature]);
+  const signature = books.map(b => `${b.id}:${b.fingerprint}:${b.status}`).join('|');
+  useEffect(() => { void queueIndexing(books, { owner, onMetadata }).catch(() => {}); }, [owner, signature]);
 }
 export async function searchLibrary(query: string, books: Book[], options: { owner?: string; bookId?: string; author?: string; limit?: number; onError?:(message:string)=>void } = {}): Promise<LibraryHit[]> {
   const hits: LibraryHit[] = [], limit = Math.min(80, Math.max(1, options.limit ?? 40));
