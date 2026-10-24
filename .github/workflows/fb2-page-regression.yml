@@ -1,0 +1,35 @@
+name: FB2 page regression
+on:
+  push:
+    branches:
+      - fix/fb2-pages-not-chapters-20261024
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reader-regression:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: source
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: source/package-lock.json
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: TypeScript and production build
+        run: npm run build
+      - name: Reader contact recognizer
+        run: npm run test:reader-gestures
+      - name: Real phone-width FB2 page geometry
+        run: node scripts/test-fb2-phone-pages.mjs
+      - name: Existing workspace regression
+        run: npm test
+      - name: Existing cloud sync regression
+        run: npm run test:sync
