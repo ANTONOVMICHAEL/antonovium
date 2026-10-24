@@ -22,8 +22,25 @@ try {
         locale: 'ru-RU',
         hasTouch: true
       });
+      const browserErrors = [], browserMessages = [];
+      page.on('pageerror', error => browserErrors.push(error.message));
+      page.on('console', message => {
+        if (message.type() === 'error') browserMessages.push(message.text());
+      });
+      page.on('requestfailed', request => browserMessages.push(`${request.url()} ${request.failure()?.errorText}`));
       await page.goto(url, { waitUntil: 'domcontentloaded' });
-      await page.locator('#run:not([disabled])').waitFor({ timeout: 30000 });
+      try {
+        await page.locator('#run:not([disabled])').waitFor({ timeout: 30000 });
+      } catch (error) {
+        const details = await page.evaluate(() => ({
+          status: document.querySelector('#status')?.textContent,
+          html: document.querySelector('#app')?.contentDocument?.body?.textContent?.slice(0, 250),
+          ready: document.readyState
+        })).catch(() => ({}));
+        throw Error(`${engineName} test harness did not load: ${JSON.stringify({
+          details, browserErrors, browserMessages: browserMessages.slice(-12)
+        })}`, { cause: error });
+      }
       await page.locator('#width').selectOption('390');
       await page.locator('#run').click();
       await page.waitForFunction(() => /^(PASS|FAIL)/.test(
