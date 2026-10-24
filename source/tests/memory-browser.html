@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ANTONOVIUM · Проверка научной памяти</title>
+<style>body{margin:0;background:#e5eaf0;color:#172c42;font:14px system-ui}header{padding:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;position:sticky;top:0;z-index:5}button,select{font:inherit;padding:8px 12px}#status{padding:0 14px;white-space:pre-wrap}#stage{padding:16px;overflow:auto}iframe{display:block;border:0;background:#fff;box-shadow:0 3px 20px #1232}details{padding:12px}pre{white-space:pre-wrap;font-size:12px;max-height:420px;overflow:auto}.explanation{max-width:85ch;padding:0 14px;color:#465a70}</style>
+<header><strong>Научная память · браузерная проверка</strong><label>Ширина <select id="width"><option>360</option><option selected>390</option><option>430</option><option>768</option><option>1280</option></select></label><button id="run" disabled>Выполнить проверки</button><button id="restore" disabled>Вернуть прежний экран</button><button id="download">Скачать отчет</button></header>
+<p class="explanation">Только изолированное тестовое окружение без входа в аккаунт. Используются искусственные PDF, FB2 и бумажная запись. Существующие файлы не удаляются. Это проверка настоящего приложения в iframe; физический iOS Safari здесь не проверяется.</p>
+<p id="status" role="status">Подготовка искусственных материалов…</p>
+<div id="stage"><iframe id="app" title="ANTONOVIUM · тестовое окружение" width="390" height="844"></iframe></div>
+<details open><summary>Результаты</summary><pre id="results"></pre></details>
+<script type="module" src="./memory-browser.js"></script>
+</html>

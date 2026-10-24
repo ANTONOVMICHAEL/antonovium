@@ -1,0 +1,32 @@
+name: Scientific memory regression
+on:
+  push:
+    branches: [main, feat/scientific-memory-1]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: source
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: source/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npm run test:cloud
+      - run: npm run test:sync
+      - run: npm run test:reader
+      - run: npm run test:pdf
+      - run: npm run test:memory
+      - name: Reproduce the published entry and assets
+        run: |
+          cmp dist/index.html ../index.html
+          for path in dist/assets/*; do cmp "$path" "../assets/$(basename "$path")"; done

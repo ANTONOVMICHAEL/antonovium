@@ -2,19 +2,25 @@ import { useMemo, useState } from 'react';
 import { useApp } from '../context';
 import { categories, connections } from '../data';
 import { Arrow, Label } from './UI';
+import {useCloud} from '../cloud';
+import {useLocalBooks} from '../localBooks';
+import {evidenceLabels} from '../scientificMemory';
 
 type Layer='relations'|'sources'|'notes'|'lines';
 const layers:[Layer,string][]=[['relations','Переходы'],['sources','Источники'],['notes','Заметки'],['lines','Линии']];
 
 export default function Atlas(){
- const {state,update,openCategory,openSource,openNote,openResearch}=useApp();
+ const {state,update,openCategory,openSource,openNote,openResearch,navigate}=useApp(),cloud=useCloud(),local=useLocalBooks();
  const [layer,setLayer]=useState<Layer>('relations'),[query,setQuery]=useState(''),[scale,setScale]=useState(1);
  const selected=categories.find(c=>c.id===state.categoryId)??categories[1];
  const matching=useMemo(()=>{const term=query.trim().toLocaleLowerCase('ru');return categories.filter(category=>`${category.title} ${category.subtitle}`.toLocaleLowerCase('ru').includes(term))},[query]);
  const active=matching.find(category=>category.id===selected.id)??matching[0]??selected;
  const linked=connections.filter(edge=>edge.includes(active.id)).map(edge=>edge.find(id=>id!==active.id)!).filter(Boolean);
- const sources=state.sources.filter(source=>source.categories.includes(active.id));
  const notes=state.notes.filter(note=>note.categories.includes(active.id));
+ const relatedIds=new Set(notes.flatMap(note=>[note.sourceId,...note.relatedSourceIds??[]]).filter((id):id is string=>!!id));
+ const available=new Map([...state.sources.map(source=>[source.id,{id:source.id,title:source.title,demo:source.demo,available:true,localOnly:source.localOnly}]as const),...local.books.map(book=>[book.id,{id:book.id,title:book.title,demo:false,available:true,localOnly:true}]as const),...(cloud.authorized?cloud.books.filter(book=>book.status==='ready').map(book=>[book.id,{id:book.id,title:book.title,demo:false,available:true,localOnly:false}]as const):[])]);
+ const sourceIds=new Set([...state.sources.filter(source=>source.categories.includes(active.id)).map(source=>source.id),...relatedIds]);
+ const sources=[...sourceIds].map(id=>available.get(id)??{id,title:state.bibliography?.find(record=>record.sourceId===id)?.title??notes.find(note=>note.sourceId===id)?.citation?.bibliography?.title??notes.find(note=>note.sourceId===id)?.sourceTitle??'Источник недоступен',demo:false,available:false,localOnly:notes.some(note=>note.sourceId===id&&note.localOnly)});
  const lines=state.research.filter(research=>research.categories.includes(active.id));
  function focusCategory(id:string){setQuery('');openCategory(id)}
 
@@ -42,8 +48,8 @@ export default function Atlas(){
     <div className="atlas-v2-tabs" role="group" aria-label="Материалы понятия">{layers.map(([id,label])=><button key={id} className={layer===id?'active':''} aria-pressed={layer===id} onClick={()=>setLayer(id)}>{label}</button>)}</div>
     <div className="atlas-v2-inspector-list">
      {layer==='relations'&&(linked.length?linked.map((id,index)=><button key={id} onClick={()=>focusCategory(id)}><span>{String(index+1).padStart(2,'0')} / рабочий переход</span><strong>{categories.find(c=>c.id===id)?.title}</strong><Arrow diagonal/></button>):<p>Связи пока не обозначены.</p>)}
-     {layer==='sources'&&(sources.length?sources.map(source=><button key={source.id} onClick={()=>openSource(source.id)}><span>{source.demo?'Демонстрационный текст':'Источник'}</span><strong>{source.title}</strong><Arrow diagonal/></button>):<p>Источников с такой категорией пока нет.</p>)}
-     {layer==='notes'&&(notes.length?notes.map(note=><button key={note.id} onClick={()=>openNote(note)}><span>{note.demo?'Пример записи':'Собственная запись'}</span><strong>{note.title}</strong><Arrow diagonal/></button>):<p>Записей с такой категорией пока нет.</p>)}
+     {layer==='sources'&&(sources.length?sources.map(source=><button key={source.id} onClick={()=>source.available?openSource(source.id):navigate('memory')}><span>{!source.available?'Документ недоступен · цитаты сохранены':source.demo?'Демонстрационный текст':source.localOnly?'На этом устройстве':'Источник'}</span><strong>{source.title}</strong><Arrow diagonal/></button>):<p>Источников с такой категорией пока нет.</p>)}
+     {layer==='notes'&&(notes.length?notes.map(note=><button key={note.id} onClick={()=>openNote(note)}><span>{note.demo?'Пример записи':evidenceLabels[note.evidenceType??'note']}{note.sourceId&&!available.has(note.sourceId)?' · документ недоступен':''}{note.localOnly?' · на этом устройстве':''}</span><strong>{note.title}</strong><Arrow diagonal/></button>):<p>Записей с такой категорией пока нет.</p>)}
      {layer==='lines'&&(lines.length?lines.map(line=><button key={line.id} onClick={()=>openResearch(line.id)}><span>{line.archived?'Архивная':'Рабочая'} исследовательская линия</span><strong>{line.title}</strong><Arrow diagonal/></button>):<p>Исследовательских линий с такой категорией пока нет.</p>)}
     </div><button className="atlas-v2-return" onClick={()=>openSource(state.sourceId,state.sectionId)}>Вернуться к чтению <Arrow/></button></>}
    </aside>

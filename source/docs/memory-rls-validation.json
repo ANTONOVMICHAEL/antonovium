@@ -1,0 +1,337 @@
+{
+  "scope": "Synthetic PostgreSQL role/JWT/RLS fixtures; transaction rolled back; not browser Auth sessions or original-file extraction",
+  "checks": 66,
+  "success": true,
+  "assertions": [
+    {
+      "name": "A cannot see B text or B bibliography through search",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "anonymous cannot execute begin RPC",
+      "detail": "Expected rejection: 42501",
+      "passed": true
+    },
+    {
+      "name": "anonymous cannot execute search RPC",
+      "detail": "Expected rejection: 42501",
+      "passed": true
+    },
+    {
+      "name": "anonymous cannot select chunks",
+      "detail": "Expected rejection: 42501",
+      "passed": true
+    },
+    {
+      "name": "anonymous cannot select documents",
+      "detail": "Expected rejection: 42501",
+      "passed": true
+    },
+    {
+      "name": "anonymous identity is empty",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "authenticated identity A",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "B cannot begin A book index",
+      "detail": "Expected rejection: 42501",
+      "passed": true
+    },
+    {
+      "name": "B cannot finish A book through RPC",
+      "detail": "Expected rejection: 42501",
+      "passed": true
+    },
+    {
+      "name": "B cannot forge A ownership through chunk DML",
+      "detail": "Expected rejection: 42501",
+      "passed": true
+    },
+    {
+      "name": "B cannot forge A ownership through document DML",
+      "detail": "Expected rejection: 42501",
+      "passed": true
+    },
+    {
+      "name": "B cannot reassign own chunk to A",
+      "detail": "Expected rejection: 42501",
+      "passed": true
+    },
+    {
+      "name": "B cannot reassign own document to A",
+      "detail": "Expected rejection: 42501",
+      "passed": true
+    },
+    {
+      "name": "B cannot select A documents or chunks",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "B cannot write A book through put RPC",
+      "detail": "Expected rejection: 42501",
+      "passed": true
+    },
+    {
+      "name": "B direct chunk UPDATE affects zero A rows",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "B direct document DELETE affects zero A rows",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "B direct document UPDATE affects zero A rows",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "B own index works with identical title and fingerprint",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "B search cannot return A text, even with explicit A book",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "begin creates empty processing document",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "bibliography saves through existing owner API",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "complete PDF finishes ready",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "completed scanned PDF is honestly no_text",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "disabled member cannot begin own index",
+      "detail": "Expected rejection: 42501",
+      "passed": true
+    },
+    {
+      "name": "disabled member cannot read own index tables",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "disabled member cannot write bibliography",
+      "detail": "Expected rejection: 42501",
+      "passed": true
+    },
+    {
+      "name": "disabled member cannot write own index",
+      "detail": "Expected rejection: 42501",
+      "passed": true
+    },
+    {
+      "name": "disabled member search has no results",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "empty query yields no accidental whole-library dump",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "exact phrase matches е/ё and preserves raw source",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "failed writes leave successful index intact",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "FB2 fabricated identifier shape rejected",
+      "detail": "Expected rejection: P0001",
+      "passed": true
+    },
+    {
+      "name": "FB2 missing offset rejected",
+      "detail": "Expected rejection: P0001",
+      "passed": true
+    },
+    {
+      "name": "FB2 reversed range rejected",
+      "detail": "Expected rejection: P0001",
+      "passed": true
+    },
+    {
+      "name": "FB2 screen page masquerading as edition page rejected",
+      "detail": "Expected rejection: P0001",
+      "passed": true
+    },
+    {
+      "name": "idempotent put does not duplicate chunks or bytes",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "interrupted FB2 is partial, never falsely ready",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "interrupted index resumes at committed unit",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "invalid direct chunk DML rejected by anchor guard",
+      "detail": "Expected rejection: P0001",
+      "passed": true
+    },
+    {
+      "name": "invalid search limit rejected",
+      "detail": "Expected rejection: P0001",
+      "passed": true
+    },
+    {
+      "name": "manual bibliography author filter and display",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "mixed phrase preserves adjacency and literal inflection",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "mixed text and scanned PDF is partial and searchable",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "multiple exact phrases all match with е/ё normalization",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "negative total units rejected",
+      "detail": "Expected rejection: P0001",
+      "passed": true
+    },
+    {
+      "name": "new fingerprint resets only the derived index",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "note fixture saved before derived index reset",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "old fingerprint cannot write after replacement",
+      "detail": "Expected rejection: 42501",
+      "passed": true
+    },
+    {
+      "name": "original author remains searchable",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "out-of-range PDF page rejected",
+      "detail": "Expected rejection: P0001",
+      "passed": true
+    },
+    {
+      "name": "oversized query rejected",
+      "detail": "Expected rejection: P0001",
+      "passed": true
+    },
+    {
+      "name": "oversized text chunk rejected",
+      "detail": "Expected rejection: P0001",
+      "passed": true
+    },
+    {
+      "name": "PDF anchor page must match source unit",
+      "detail": "Expected rejection: P0001",
+      "passed": true
+    },
+    {
+      "name": "progress cannot move backwards",
+      "detail": "Expected rejection: P0001",
+      "passed": true
+    },
+    {
+      "name": "put tracks exact byte and unit counts",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "quoted phrase and unquoted morphology combine with AND",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "raw text preserved; normalized text derived server side",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "resumed FB2 finishes with both exact paragraph anchors",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "Russian morphology returns actual matched source lexeme",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "same fingerprint restarts by resuming, without deleting",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "stale derived fingerprint is excluded from search",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "stale fingerprint rejected",
+      "detail": "Expected rejection: 42501",
+      "passed": true
+    },
+    {
+      "name": "unbalanced phrase quotes rejected",
+      "detail": "Expected rejection: P0001",
+      "passed": true
+    },
+    {
+      "name": "unrelated author cannot match",
+      "detail": "",
+      "passed": true
+    },
+    {
+      "name": "word combinations use AND",
+      "detail": "",
+      "passed": true
+    }
+  ]
+}

@@ -14,7 +14,8 @@
     "test:sync": "node scripts/test-sync.mjs",
     "check:edge": "node scripts/check-edge.mjs",
     "check:published": "node scripts/check-published.mjs",
-    "test:reader": "node scripts/test-reader-gestures.mjs"
+    "test:reader": "node scripts/test-reader-gestures.mjs",
+    "test:memory": "node scripts/test-memory-domain.mjs && node scripts/test-memory-index.mjs && node scripts/test-quote-anchors.mjs && node scripts/test-memory-cards.mjs && node scripts/test-memory-reader.mjs && node scripts/test-book-promotion.mjs"
   },
   "dependencies": {
     "@noble/hashes": "2.4.0",

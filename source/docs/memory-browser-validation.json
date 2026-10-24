@@ -1,0 +1,508 @@
+{
+  "environment": "Real same-origin iframe; artificial deviceOnly fixtures; signed out; no physical iOS/WebKit test",
+  "token": "79a7424a-bca88e39-9c88bb96-2972c53e",
+  "checks": [
+    {
+      "name": "Automatic indexing finishes for PDF and FB2; blank PDF honestly reports no_text",
+      "pass": true,
+      "detail": {
+        "fb2": {
+          "book_id": "276cf3ef-870dcbea-dbc3302c-6ec97291",
+          "fingerprint": "memory-qa:79a7424a-bca88e39-9c88bb96-2972c53e:fb2",
+          "index_version": 1,
+          "status": "ready",
+          "next_unit": 301,
+          "total_units": 301,
+          "chunk_count": 301,
+          "raw_bytes": 376970,
+          "text_units": 301,
+          "error": "",
+          "updated_at": "2026-10-24T14:26:10.838Z",
+          "key": "276cf3ef-870dcbea-dbc3302c-6ec97291"
+        },
+        "pdf": {
+          "book_id": "280e6c10-23e6ec96-1b3fb36b-36e5665d",
+          "fingerprint": "memory-qa:79a7424a-bca88e39-9c88bb96-2972c53e:pdf",
+          "index_version": 1,
+          "status": "ready",
+          "next_unit": 30,
+          "total_units": 30,
+          "chunk_count": 30,
+          "raw_bytes": 46701,
+          "text_units": 30,
+          "error": "",
+          "updated_at": "2026-10-24T14:26:11.111Z",
+          "key": "280e6c10-23e6ec96-1b3fb36b-36e5665d"
+        },
+        "scan": {
+          "book_id": "0d161b1e-3f4b753b-f0239778-b86fa110",
+          "fingerprint": "memory-qa:79a7424a-bca88e39-9c88bb96-2972c53e:scan",
+          "index_version": 1,
+          "status": "no_text",
+          "next_unit": 1,
+          "total_units": 1,
+          "chunk_count": 0,
+          "raw_bytes": 0,
+          "text_units": 0,
+          "error": "1 страниц без текстового слоя; OCR не выполнялся",
+          "updated_at": "2026-10-24T14:26:10.597Z",
+          "key": "0d161b1e-3f4b753b-f0239778-b86fa110"
+        }
+      }
+    },
+    {
+      "name": "Index search: phrase, case, е/ё, AND, source and author filters",
+      "pass": true,
+      "detail": {
+        "phrase": 1,
+        "caseAndYo": 1,
+        "and": 1,
+        "author": 1,
+        "pdfPage": 7
+      }
+    },
+    {
+      "name": "Search UI: honest scan status and source/author filters",
+      "pass": true
+    },
+    {
+      "name": "pdf: save a quotation through actual search UI",
+      "pass": true,
+      "detail": {
+        "id": "254ac802-24a85f82-36a60d37-bb5fc035",
+        "anchor": {
+          "format": "pdf",
+          "page": 7,
+          "offset": 0,
+          "quote": "Страница 7. Проверка чтения ",
+          "prefix": ""
+        }
+      }
+    },
+    {
+      "name": "pdf: open exact search anchor in the real reader",
+      "pass": true
+    },
+    {
+      "name": "pdf: reopening a search hit on the same file page revalidates its literal",
+      "pass": true
+    },
+    {
+      "name": "pdf: paged reading opens an exact search hit from another file page",
+      "pass": true
+    },
+    {
+      "name": "fb2: save a quotation through actual search UI",
+      "pass": true,
+      "detail": {
+        "id": "c2e8f4f2-782f18a0-1e455817-54c3f440",
+        "anchor": {
+          "format": "fb2",
+          "chapter": "fb2-0.1.0",
+          "paragraph": "fb2-0.1.0.1",
+          "offset": 0,
+          "endParagraph": "fb2-0.1.0.1",
+          "endOffset": 233,
+          "quote": "Ёжиковый учёт. Научная память бережно сохраняет буквальную цитату. Фрагмент 1.1. Правовая оценка поведения требует сопоставления фактических обстоятельств и содержания применимой нормы. Ссылка на добросовестность сохраняет самостояте",
+          "prefix": ""
+        }
+      }
+    },
+    {
+      "name": "fb2: open exact search anchor in the real reader",
+      "pass": true
+    },
+    {
+      "name": "Bibliography UI: edit the concrete edition and confirm supplied year",
+      "pass": true
+    },
+    {
+      "name": "Quotation card UI: literal remains readonly while comment and printed page change",
+      "pass": true
+    },
+    {
+      "name": "Manual scan quotation UI: whitespace, manual origin and two page numbers",
+      "pass": true
+    },
+    {
+      "name": "Search UI sends two independent exact anchors to the research desk",
+      "pass": true
+    },
+    {
+      "name": "Quotation cards preserve both desk quotation IDs; common note links both sources",
+      "pass": true
+    },
+    {
+      "name": "Structured export/import roundtrip preserves literals, provenance, comments and links",
+      "pass": true,
+      "detail": {
+        "records": 4,
+        "bibliography": 1,
+        "originalsIncluded": false
+      }
+    },
+    {
+      "name": "360px: memory has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 354,
+        "scroll": 354,
+        "offenders": [
+          {
+            "tag": "BUTTON",
+            "class": "",
+            "left": 357,
+            "right": 466
+          },
+          {
+            "tag": "SPAN",
+            "class": "",
+            "left": 459,
+            "right": 466
+          }
+        ]
+      }
+    },
+    {
+      "name": "360px: library has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 354,
+        "scroll": 354,
+        "offenders": [
+          {
+            "tag": "BUTTON",
+            "class": "",
+            "left": 338,
+            "right": 419
+          }
+        ]
+      }
+    },
+    {
+      "name": "360px: desk has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 354,
+        "scroll": 354,
+        "offenders": []
+      }
+    },
+    {
+      "name": "360px: full-text search modal has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 360,
+        "scroll": 360,
+        "offenders": []
+      }
+    },
+    {
+      "name": "390px: memory has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 384,
+        "scroll": 384,
+        "offenders": [
+          {
+            "tag": "BUTTON",
+            "class": "",
+            "left": 357,
+            "right": 466
+          },
+          {
+            "tag": "SPAN",
+            "class": "",
+            "left": 459,
+            "right": 466
+          }
+        ]
+      }
+    },
+    {
+      "name": "390px: library has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 384,
+        "scroll": 384,
+        "offenders": [
+          {
+            "tag": "BUTTON",
+            "class": "",
+            "left": 338,
+            "right": 419
+          }
+        ]
+      }
+    },
+    {
+      "name": "390px: desk has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 384,
+        "scroll": 384,
+        "offenders": []
+      }
+    },
+    {
+      "name": "390px: full-text search modal has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 390,
+        "scroll": 390,
+        "offenders": []
+      }
+    },
+    {
+      "name": "430px: memory has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 424,
+        "scroll": 424,
+        "offenders": [
+          {
+            "tag": "BUTTON",
+            "class": "",
+            "left": 357,
+            "right": 466
+          },
+          {
+            "tag": "SPAN",
+            "class": "",
+            "left": 459,
+            "right": 466
+          }
+        ]
+      }
+    },
+    {
+      "name": "430px: library has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 424,
+        "scroll": 424,
+        "offenders": []
+      }
+    },
+    {
+      "name": "430px: desk has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 424,
+        "scroll": 424,
+        "offenders": []
+      }
+    },
+    {
+      "name": "430px: full-text search modal has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 430,
+        "scroll": 430,
+        "offenders": []
+      }
+    },
+    {
+      "name": "768px: memory has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 762,
+        "scroll": 762,
+        "offenders": []
+      }
+    },
+    {
+      "name": "768px: library has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 762,
+        "scroll": 762,
+        "offenders": []
+      }
+    },
+    {
+      "name": "768px: desk has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 762,
+        "scroll": 762,
+        "offenders": []
+      }
+    },
+    {
+      "name": "768px: full-text search modal has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 768,
+        "scroll": 768,
+        "offenders": []
+      }
+    },
+    {
+      "name": "1280px: memory has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 1274,
+        "scroll": 1274,
+        "offenders": []
+      }
+    },
+    {
+      "name": "1280px: library has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 1274,
+        "scroll": 1274,
+        "offenders": []
+      }
+    },
+    {
+      "name": "1280px: desk has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 1274,
+        "scroll": 1274,
+        "offenders": []
+      }
+    },
+    {
+      "name": "1280px: full-text search modal has no page overflow",
+      "pass": true,
+      "detail": {
+        "width": 1280,
+        "scroll": 1280,
+        "offenders": []
+      }
+    },
+    {
+      "name": "No runtime errors and all fixtures remain local device-only records",
+      "pass": true,
+      "detail": {
+        "fixtureCount": 3
+      }
+    }
+  ],
+  "runtimeErrors": [],
+  "fixtures": {
+    "fb2": {
+      "id": "276cf3ef-870dcbea-dbc3302c-6ec97291",
+      "title": "Память: русская книга FB2",
+      "local": true,
+      "deviceOnly": true
+    },
+    "pdf": {
+      "id": "280e6c10-23e6ec96-1b3fb36b-36e5665d",
+      "title": "Память: текстовый PDF",
+      "local": true,
+      "deviceOnly": true
+    },
+    "scan": {
+      "id": "0d161b1e-3f4b753b-f0239778-b86fa110",
+      "title": "Память: PDF без текстового слоя",
+      "local": true,
+      "deviceOnly": true
+    }
+  },
+  "startedAt": "2026-10-24T14:36:29.781Z",
+  "index": {
+    "fb2": {
+      "book_id": "276cf3ef-870dcbea-dbc3302c-6ec97291",
+      "fingerprint": "memory-qa:79a7424a-bca88e39-9c88bb96-2972c53e:fb2",
+      "index_version": 1,
+      "status": "ready",
+      "next_unit": 301,
+      "total_units": 301,
+      "chunk_count": 301,
+      "raw_bytes": 376970,
+      "text_units": 301,
+      "error": "",
+      "updated_at": "2026-10-24T14:26:10.838Z",
+      "key": "276cf3ef-870dcbea-dbc3302c-6ec97291"
+    },
+    "pdf": {
+      "book_id": "280e6c10-23e6ec96-1b3fb36b-36e5665d",
+      "fingerprint": "memory-qa:79a7424a-bca88e39-9c88bb96-2972c53e:pdf",
+      "index_version": 1,
+      "status": "ready",
+      "next_unit": 30,
+      "total_units": 30,
+      "chunk_count": 30,
+      "raw_bytes": 46701,
+      "text_units": 30,
+      "error": "",
+      "updated_at": "2026-10-24T14:26:11.111Z",
+      "key": "280e6c10-23e6ec96-1b3fb36b-36e5665d"
+    },
+    "scan": {
+      "book_id": "0d161b1e-3f4b753b-f0239778-b86fa110",
+      "fingerprint": "memory-qa:79a7424a-bca88e39-9c88bb96-2972c53e:scan",
+      "index_version": 1,
+      "status": "no_text",
+      "next_unit": 1,
+      "total_units": 1,
+      "chunk_count": 0,
+      "raw_bytes": 0,
+      "text_units": 0,
+      "error": "1 страниц без текстового слоя; OCR не выполнялся",
+      "updated_at": "2026-10-24T14:26:10.597Z",
+      "key": "0d161b1e-3f4b753b-f0239778-b86fa110"
+    }
+  },
+  "search": {
+    "fb2": {
+      "id": "local:276cf3ef-870dcbea-dbc3302c-6ec97291:fb2-0.1.0.1:0",
+      "bookId": "276cf3ef-870dcbea-dbc3302c-6ec97291",
+      "title": "Память: русская книга FB2",
+      "author": "Исследователь Ёжиков",
+      "local": true,
+      "format": "fb2",
+      "body": "Ёжиковый учёт. Научная память бережно сохраняет буквальную цитату. Фрагмент 1.1. Правовая оценка поведения требует сопоставления фактических обстоятельств и содержания применимой нормы. Ссылка на добросовестность сохраняет самостоятельное значение лишь при раскрытии оснований такой оценки. Правовая оценка поведения требует сопоставления фактических обстоятельств и содержания применимой нормы. Ссылка на добросовестность сохраняет самостоятельное значение лишь при раскрытии оснований такой оценки. Правовая оценка поведения требует сопоставления фактических обстоятельств и содержания применимой нормы. Ссылка на добросовестность сохраняет самостоятельное значение лишь при раскрытии оснований такой оценки.  [1]",
+      "quote": "Ёжиковый учёт. Научная память бережно сохраняет буквальную цитату. Фрагмент 1.1. Правовая оценка поведения требует сопоставления фактических обстоятельств и содержания применимой нормы. Ссылка на добросовестность сохраняет самостояте",
+      "before": "",
+      "after": "льное значение лишь при раскрытии оснований такой оценки. Правовая оценка поведе",
+      "start": 0,
+      "end": 233,
+      "matchStart": 0,
+      "matchEnd": 13,
+      "anchor": {
+        "format": "fb2",
+        "chapter": "fb2-0.1.0",
+        "paragraph": "fb2-0.1.0.1",
+        "offset": 0,
+        "endParagraph": "fb2-0.1.0.1",
+        "endOffset": 233,
+        "quote": "Ёжиковый учёт. Научная память бережно сохраняет буквальную цитату. Фрагмент 1.1. Правовая оценка поведения требует сопоставления фактических обстоятельств и содержания применимой нормы. Ссылка на добросовестность сохраняет самостояте",
+        "prefix": ""
+      },
+      "locator": "Глава 1. Проверка положения в тексте",
+      "status": "ready"
+    },
+    "pdf": {
+      "id": "local:280e6c10-23e6ec96-1b3fb36b-36e5665d:pdf:7:0",
+      "bookId": "280e6c10-23e6ec96-1b3fb36b-36e5665d",
+      "title": "Память: текстовый PDF",
+      "author": "Проверочный Петров",
+      "local": true,
+      "format": "pdf",
+      "body": "Страница 7. Проверка чтения \nУчебный текст для проверки интерфейса.\nОдиночное касание меняет одну страницу.\nВыделение сохраняется отдельной заметкой.\nМасштаб и прокрутка доступны независимо.\nУчебный текст для проверки интерфейса.\nОдиночное касание меняет одну страницу.\nВыделение сохраняется отдельной заметкой.\nМасштаб и прокрутка доступны независимо.\nУчебный текст для проверки интерфейса.\nОдиночное касание меняет одну страницу.\nВыделение сохраняется отдельной заметкой.\nМасштаб и прокрутка доступны независимо.\nУчебный текст для проверки интерфейса.\nОдиночное касание меняет одну страницу.\nВыделение сохраняется отдельной заметкой.\nМасштаб и прокрутка доступны независимо.\nУчебный текст для проверки интерфейса.\nОдиночное касание меняет одну страницу.\nВыделение сохраняется отдельной заметкой.\nМасштаб и прокрутка доступны независимо. ",
+      "quote": "Страница 7. Проверка чтения ",
+      "before": "",
+      "after": "\nУчебный текст для проверки интерфейса.\nОдиночное касание меняет одну страницу.\n",
+      "start": 0,
+      "end": 28,
+      "matchStart": 0,
+      "matchEnd": 11,
+      "anchor": {
+        "format": "pdf",
+        "page": 7,
+        "offset": 0,
+        "quote": "Страница 7. Проверка чтения ",
+        "prefix": ""
+      },
+      "locator": "Страница PDF 7",
+      "status": "ready"
+    }
+  },
+  "finishedAt": "2026-10-24T14:36:46.683Z",
+  "pass": true
+}

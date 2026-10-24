@@ -17,7 +17,7 @@ function AddSource({onClose}:{onClose:()=>void}){
  <fieldset><legend>Категории источника</legend><div className="tag-picker">{categories.map(c=><button type="button" className={`tag ${tags.includes(c.id)?'selected':''}`} key={c.id} onClick={()=>setTags(tags.includes(c.id)?tags.filter(x=>x!==c.id):[...tags,c.id])}>{c.title}</button>)}</div></fieldset>{error&&<p role="alert" className="error">{error}</p>}<div className="form-actions"><button type="button" className="text-button" onClick={onClose}>Отмена</button><button className="button primary" disabled={!title.trim()||(format==='digital'&&!text.trim())}>Добавить в библиотеку →</button></div></form></Modal>;
 }
 export default function Library(){
- const{state,openSource,openCategory}=useApp();
+ const{state,openSource,openCategory,navigate}=useApp();
  const cloud=useCloud(),local=useLocalBooks();
  const[filter,setFilter]=useState<'all'|'files'|'digital'|'paper'>('all');
  const[search,setSearch]=useState('');
@@ -34,7 +34,7 @@ export default function Library(){
  return <main className="page library-page library-v3 page-enter" id="main">
   <header className="library-v3-head">
    <div><h1>Библиотека</h1></div>
-   <div className="library-v3-add"><CloudUploadButton/><button className="button outline" onClick={()=>setAdding(true)}>Добавить текст или издание <span aria-hidden="true">+</span></button></div>
+   <div className="library-v3-add"><button className="button outline" onClick={()=>navigate('memory')}>Картотека и библиография</button><CloudUploadButton/><button className="button outline" onClick={()=>setAdding(true)}>Добавить текст или издание <span aria-hidden="true">+</span></button></div>
   </header>
   <div className="library-v3-searchbar">
    <label className="library-v3-search"><span aria-hidden="true">⌕</span><input aria-label="Поиск в библиотеке" type="search" placeholder="Название, автор, сведения об издании" value={search} onChange={e=>setSearch(e.target.value)}/></label>

@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import {createServer} from 'vite';
+const vite=await createServer({configFile:false,optimizeDeps:{noDiscovery:true,include:[]},server:{middlewareMode:true},appType:'custom'});
+try{
+ const {promoteBookReferences}=await vite.ssrLoadModule('/src/bookMigration.ts');
+ const {defaultState}=await vite.ssrLoadModule('/src/storage.ts');
+ const raw='  Цитата с ё.\nБез исправлений. ';
+ const bibliography={id:'local',sourceId:'local',title:'Конкретное издание',authors:[],sourceType:'monograph',provenance:{},confirmedFields:[],updatedAt:'2026-10-24',localOnly:true};
+ const quote={id:'q',sourceId:'local',localOnly:true,quote:raw,body:'Отдельный комментарий',title:'Цитата',kind:'thought',categories:[],createdAt:'2026-10-24',citation:{sourceId:'local',editionId:'local',fingerprint:'f'.repeat(64),bibliography,rawText:raw,origin:'selection',verification:'unverified',savedAt:'2026-10-24',anchor:{format:'fb2',chapter:'fb2-1',paragraph:'fb2-1.1',offset:0}}};
+ const state={...structuredClone(defaultState),sourceId:'local',compareSourceId:'local',bibliography:[bibliography],notes:[quote,{...quote,id:'mixed',relatedSourceIds:['other-local']},{...quote,id:'unrelated',sourceId:'unrelated',citation:undefined}],compareExcerpt:quote,desk:{leftId:'local',rightId:'unrelated',leftLocalOnly:true,ratio:.5,active:'left',leftQuoteId:'q',leftAnchor:quote.citation.anchor}};
+ const next=promoteBookReferences(state,'local','shared',['other-local']);
+ assert.equal(next.sourceId,'shared');assert.equal(next.compareSourceId,'shared');assert.equal(next.notes[0].citation.sourceId,'shared');assert.equal(next.notes[0].citation.editionId,'shared');assert.equal(next.notes[0].citation.bibliography.sourceId,'shared');assert.equal(next.bibliography[0].id,'shared');assert.equal(next.notes[0].localOnly,undefined);assert.equal(next.notes[1].localOnly,true);assert.equal(next.notes[2],state.notes[2]);assert.equal(next.notes[0].citation.rawText,raw);assert.equal(next.notes[0].body,quote.body);assert.equal(next.compareExcerpt.sourceId,'shared');assert.equal(next.desk.leftId,'shared');assert.equal(next.desk.leftLocalOnly,false);assert.deepEqual(next.desk.leftAnchor,quote.citation.anchor);assert.equal(next.desk.leftQuoteId,'q');assert.equal(state.sourceId,'local');
+ assert.deepEqual(promoteBookReferences(next,'local','shared',['other-local']),next);
+ console.log('PASS book promotion remaps edition, bibliography, quotation and desk references without changing literal text; remaining local dependencies stay private; replay is idempotent.');
+ const orphan={...quote,id:'orphan',sourceId:'removed-local',citation:{...quote.citation,sourceId:'removed-local',editionId:'removed-local',bibliography:{...bibliography,id:'removed-local',sourceId:'removed-local'}}};
+ const mixed={...quote,id:'mixed-orphan',relatedSourceIds:['removed-local'],quotationIds:[orphan.id]},unknown={...quote,id:'mixed-unknown',relatedSourceIds:['no-longer-catalogued']},missingQuote={...quote,id:'missing-quote',quotationIds:['deleted-quotation']};
+ const privacyState={...state,notes:[quote,mixed,orphan,unknown,missingQuote],bibliography:[bibliography]};
+ const privateNext=promoteBookReferences(privacyState,'local','shared',[]);
+ assert.equal(privateNext.notes.find(item=>item.id===quote.id).localOnly,undefined);
+ for(const item of [mixed,orphan,unknown,missingQuote])assert.equal(privateNext.notes.find(next=>next.id===item.id).localOnly,true,item.id+' must remain private');
+ assert.equal(privateNext.notes.find(item=>item.id===mixed.id).sourceId,'shared');
+ assert.deepEqual(privateNext.notes.find(item=>item.id===mixed.id).quotationIds,[orphan.id]);
+ assert.deepEqual(promoteBookReferences(privateNext,'local','shared',[]),privateNext);
+ console.log('PASS promotion retains removed local sources, linked orphan quotations, unknown source dependencies and missing quotation links while the single promoted quotation becomes shared.');
+ const linkedOnly={...quote,id:'linked-only',quotationIds:[orphan.id]},knownLocal={...quote,id:'known-local',relatedSourceIds:['removed-local']};
+ const catalogued={...state,notes:[quote,linkedOnly,orphan,knownLocal],bibliography:[bibliography,{...bibliography,id:'removed-local',sourceId:'removed-local'}]};
+ const cataloguedNext=promoteBookReferences(catalogued,'local','shared',[]);
+ assert.equal(cataloguedNext.notes.find(item=>item.id==='linked-only').localOnly,true);
+ assert.equal(cataloguedNext.notes.find(item=>item.id==='known-local').localOnly,true);
+ const complete=promoteBookReferences(cataloguedNext,'removed-local','shared-other',[]);
+ assert.equal(complete.notes.find(item=>item.id==='known-local').localOnly,undefined);
+ assert.equal(complete.notes.find(item=>item.id===orphan.id).localOnly,undefined);
+ assert.equal(complete.notes.find(item=>item.id==='known-local').quote,raw);
+ console.log('PASS known private metadata and linked orphan quotes preserve privacy; explicitly promoting the remaining concrete source safely clears its records.');
+}finally{await vite.close()}

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { demoNotes, demoResearch, demoSources } from './data';
 import type { SavedState, Source, Note, Research } from './types';
+import {validBibliography,validMemoryNote,validFileAnchor,validTextAnchor} from './scientificMemory';
 export const STORAGE_KEY = 'antonovium.workspace.v1';
 export function newId(){
   if(globalThis.crypto?.randomUUID)return globalThis.crypto.randomUUID();
@@ -16,7 +17,7 @@ export const defaultState: SavedState = {
   wilkinsActivity:'adaptive', compareSourceId:'qualification', compareSectionId:'q1', categoryId:'badfaith', researchId:'r1',
   desk:{leftId:'boundaries',rightId:'qualification',leftSectionId:'s1',rightSectionId:'q1',ratio:.5,active:'left',researchId:'r1'}
 };
-const screens=['cabinet','library','reader','desk','atlas','lab','manuscripts','horizon','archive'];
+const screens=['cabinet','library','reader','desk','atlas','lab','manuscripts','horizon','archive','memory'];
 export function decodeState(value:unknown): SavedState {
   if(!value||typeof value!=='object'||(value as SavedState).version!==1) throw new Error('Неподдерживаемый формат данных. Нужен экспорт ANTONOVIUM версии 1.');
   const s=value as SavedState;
@@ -28,6 +29,10 @@ export function decodeState(value:unknown): SavedState {
     for(const section of source.sections){if(typeof section.id!=='string'||typeof section.title!=='string'||!Array.isArray(section.paragraphs)||section.paragraphs.some(p=>typeof p.id!=='string'||typeof p.text!=='string'))throw new Error('Некорректная структура текста.');}
   }
   for(const note of s.notes){if(!note||typeof note.id!=='string'||typeof note.title!=='string'||typeof note.body!=='string'||!Array.isArray(note.categories)||note.categories.some(c=>typeof c!=='string')||!['thought','thesis','question'].includes(note.kind)||typeof note.createdAt!=='string'||(note.quote!==undefined&&typeof note.quote!=='string')||(note.anchors&&(!Array.isArray(note.anchors)||note.anchors.some(a=>!a||typeof a.paragraphId!=='string'||!Number.isInteger(a.start)||!Number.isInteger(a.end)||a.start<0||a.end<a.start))))throw new Error('Некорректные данные заметки.');}
+  if(s.notes.some(n=>!validMemoryNote(n)))throw new Error('Некорректная научная привязка заметки.');
+  if(s.bibliography!==undefined&&(!Array.isArray(s.bibliography)||s.bibliography.length>10000||!s.bibliography.every(validBibliography)||new Set(s.bibliography.map(b=>b.id)).size!==s.bibliography.length))throw new Error('Некорректная библиографическая картотека.');
+  if(s.bibliographyTemplate!==undefined&&(typeof s.bibliographyTemplate!=='string'||s.bibliographyTemplate.length>5000))throw new Error('Некорректный библиографический шаблон.');
+  if(s.bibliographicTemplates!==undefined&&(!s.bibliographicTemplates||typeof s.bibliographicTemplates.bibliography!=='string'||typeof s.bibliographicTemplates.citation!=='string'||s.bibliographicTemplates.bibliography.length>5000||s.bibliographicTemplates.citation.length>5000))throw new Error('Некорректные шаблоны цитирования.');
   for(const research of s.research){if(!research||typeof research.id!=='string'||typeof research.title!=='string'||typeof research.question!=='string'||typeof research.hypothesis!=='string'||!Array.isArray(research.categories)||research.categories.some(c=>typeof c!=='string')||typeof research.archived!=='boolean')throw new Error('Некорректные данные исследования.');}
   const source=s.sources.find(x=>x.id===s.sourceId)??s.sources.find(x=>x.sections.length)??s.sources[0];
   return {...defaultState,...s, theme:['cobalt','plum','emerald'].includes(s.theme)?s.theme:'cobalt',screen:screens.includes(s.screen)?s.screen:'cabinet',mode:['reading','research','compare'].includes(s.mode)?s.mode:'research',
@@ -41,9 +46,18 @@ export function decodeState(value:unknown): SavedState {
       leftId:s.desk.leftId,rightId:s.desk.rightId,
       leftSectionId:typeof s.desk.leftSectionId==='string'?s.desk.leftSectionId:undefined,
       rightSectionId:typeof s.desk.rightSectionId==='string'?s.desk.rightSectionId:undefined,
+      leftAnchor:validFileAnchor(s.desk.leftAnchor)?s.desk.leftAnchor:undefined,
+      rightAnchor:validFileAnchor(s.desk.rightAnchor)?s.desk.rightAnchor:undefined,
+      leftTextAnchor:validTextAnchor(s.desk.leftTextAnchor)?s.desk.leftTextAnchor:undefined,
+      rightTextAnchor:validTextAnchor(s.desk.rightTextAnchor)?s.desk.rightTextAnchor:undefined,
+      leftLocalOnly:typeof s.desk.leftLocalOnly==='boolean'?s.desk.leftLocalOnly:undefined,
+      rightLocalOnly:typeof s.desk.rightLocalOnly==='boolean'?s.desk.rightLocalOnly:undefined,
+      leftQuoteId:typeof s.desk.leftQuoteId==='string'?s.desk.leftQuoteId:undefined,
+      rightQuoteId:typeof s.desk.rightQuoteId==='string'?s.desk.rightQuoteId:undefined,
       ratio:Math.max(.3,Math.min(.7,Number(s.desk.ratio)||.5)),
       active:s.desk.active==='right'?'right':'left',
       researchId:typeof s.desk.researchId==='string'?s.desk.researchId:undefined}:structuredClone(defaultState.desk),
+    bibliography:s.bibliography??[],
     wide:!!s.wide,quiet:!!s.quiet, sources:s.sources as Source[],notes:s.notes as Note[],research:s.research as Research[]};
 }
 export function useWorkspace(storageKey=STORAGE_KEY){

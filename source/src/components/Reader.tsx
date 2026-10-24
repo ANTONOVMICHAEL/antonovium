@@ -1,10 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { useApp } from '../context';
 import { categoryTitle } from '../data';
-import type { Excerpt, Mode, Note, Paragraph } from '../types';
+import type { Excerpt, Mode, Note, Paragraph, TextAnchor } from '../types';
 import { Arrow, Empty, Label } from './UI';
 import NoteList from './NoteList';
 import ReaderRail from './ReaderRail';
+import {createQuotation,getBibliography} from '../scientificMemory';
+import {sourceParagraphContext,verifiedTextAnchor} from '../quoteAnchors';
 
 function highlighted(paragraph:Paragraph,notes:Note[],onClick:(id:string)=>void):ReactNode[]{
  const intervals=notes.flatMap(note=>(note.anchors??[]).filter(a=>a.paragraphId===paragraph.id).map(a=>({...a,noteId:note.id,kind:note.kind})));
@@ -36,16 +38,38 @@ export default function Reader(){
  const[contents,setContents]=useState(false);const[settings,setSettings]=useState(false);const[notesOpen,setNotesOpen]=useState(false);const[controlsOpen,setControlsOpen]=useState(false);const[findOpen,setFindOpen]=useState(false);const[findQuery,setFindQuery]=useState('');
  const[toolbar,setToolbar]=useState<{x:number;y:number}|null>(null);
  const scroll=useRef<HTMLDivElement>(null);const article=useRef<HTMLElement>(null);const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
+ const selectedContext=useRef<{contextBefore?:string;contextAfter?:string}>({});
+ const focusCleanup=useRef<(()=>void)|null>(null);
  const key=`${source?.id}:${section?.id}`;
  const sectionNumber=(source?.sections.findIndex(s=>s.id===section?.id)??0)+1;
  useLayoutEffect(()=>{if(scroll.current)scroll.current.scrollTop=state.positions[key]??0;setToolbar(null);},[key]);
- useEffect(()=>{if(!focusParagraph)return;const id=focusParagraph;const frame=requestAnimationFrame(()=>{const p=article.current?.querySelector<HTMLElement>(`[data-paragraph="${CSS.escape(id)}"]`);if(p&&scroll.current){scroll.current.scrollTop+=p.getBoundingClientRect().top-scroll.current.getBoundingClientRect().top-50;p.classList.add('paragraph-focus');setTimeout(()=>p.classList.remove('paragraph-focus'),1800);}setFocusParagraph(null)});return()=>cancelAnimationFrame(frame)},[focusParagraph,key]);
+ useEffect(()=>{
+  if(!focusParagraph)return;const id=focusParagraph;
+  const frame=requestAnimationFrame(()=>{
+   let p:HTMLElement|null=null,rect:DOMRect|undefined;
+   if(id.startsWith('text:')&&article.current){try{
+    const at=JSON.parse(id.slice(5)) as TextAnchor&{quote?:string};if(typeof at.paragraphId!=='string'||!Number.isFinite(at.start)||!Number.isFinite(at.end))throw Error('invalid anchor');
+    const hit=verifiedTextAnchor(article.current,at);p=hit.paragraph;rect=hit.range?.getBoundingClientRect();
+    if(!hit.found)toast('Точный фрагмент не найден. Открыт ближайший доступный абзац.');else if(!hit.exact)toast('Фрагмент найден с учетом пробелов и регистра. Проверь цитату по источнику.');
+   }catch{toast('Текстовый ориентир поврежден. Открыт доступный раздел источника.')}}else p=article.current?.querySelector<HTMLElement>(`[data-paragraph="${CSS.escape(id)}"]`)??null;
+   if(p&&scroll.current){scroll.current.scrollTop+=(rect??p.getBoundingClientRect()).top-scroll.current.getBoundingClientRect().top-50;focusCleanup.current?.();p.classList.add('paragraph-focus');const timer=setTimeout(()=>p?.classList.remove('paragraph-focus'),1800);focusCleanup.current=()=>{clearTimeout(timer);p?.classList.remove('paragraph-focus')}}
+   setFocusParagraph(null);
+  });return()=>cancelAnimationFrame(frame);
+ },[focusParagraph,key]);
+ useEffect(()=>()=>focusCleanup.current?.(),[]);
  useEffect(()=>{if(selectedNoteId&&state.mode==='research'){requestAnimationFrame(()=>document.getElementById(`note-${selectedNoteId}`)?.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'}));}},[selectedNoteId,state.mode]);
  useEffect(()=>()=>{if(timer.current)clearTimeout(timer.current)},[]);
  function rememberScroll(){setToolbar(null);const position=scroll.current?.scrollTop??0;if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>update(s=>({...s,positions:{...s.positions,[key]:position}})),150);}
  function preservePosition(change:()=>void){const container=scroll.current;const top=container?.getBoundingClientRect().top??0;const visible=Array.from(article.current?.querySelectorAll<HTMLElement>('[data-paragraph]')??[]).find(p=>p.getBoundingClientRect().bottom>top+50);const offset=visible?visible.getBoundingClientRect().top-top:0;change();requestAnimationFrame(()=>{if(visible&&container){container.scrollTop+=visible.getBoundingClientRect().top-container.getBoundingClientRect().top-offset;}});}
  function mode(value:Mode){preservePosition(()=>update({mode:value}));setToolbar(null);setControlsOpen(false);if(value!=='research')setNotesOpen(false)}
- function capture(){if(!article.current)return;const result=getExcerpt(article.current,source!.id,section!.id);if(result){setSelection(result.excerpt);setToolbar({x:Math.max(16,Math.min(innerWidth-300,result.rect.left+result.rect.width/2-140)),y:Math.max(12,result.rect.top-52)});}else setToolbar(null);}
+ function capture(){if(!article.current)return;const result=getExcerpt(article.current,source!.id,section!.id);if(result){selectedContext.current=sourceParagraphContext(article.current,result.excerpt.anchors);setSelection({...result.excerpt,localOnly:source?.localOnly});setToolbar({x:Math.max(16,Math.min(innerWidth-300,result.rect.left+result.rect.width/2-140)),y:Math.max(12,result.rect.top-52)});}else setToolbar(null);}
+ function saveQuotation(){
+  if(!selection||!source||selection.sourceId!==source.id)return;
+  const bibliography=getBibliography(source,state.bibliography?.find(record=>record.sourceId===source.id));
+  const value=createQuotation({source,rawText:selection.quote,anchors:selection.anchors,sectionId:selection.sectionId,bibliography,origin:'selection',...selectedContext.current});
+  update(s=>({...s,notes:[value,...s.notes],bibliography:s.bibliography?.some(record=>record.sourceId===source.id)?s.bibliography:[...s.bibliography??[],bibliography]}));
+  setSelection(null);setToolbar(null);window.getSelection()?.removeAllRanges();toast('Буквальная цитата сохранена с привязкой к источнику');
+ }
  useEffect(()=>{let captureTimer:ReturnType<typeof setTimeout>|undefined;const changed=()=>{if(captureTimer)clearTimeout(captureTimer);captureTimer=setTimeout(()=>{const current=window.getSelection();if(current&&!current.isCollapsed&&current.anchorNode&&article.current?.contains(current.anchorNode))capture()},140)};document.addEventListener('selectionchange',changed);return()=>{document.removeEventListener('selectionchange',changed);if(captureTimer)clearTimeout(captureTimer)}},[source?.id,section?.id]);
  useEffect(()=>{const escape=(e:KeyboardEvent)=>{if(e.key==='Escape'){setFindOpen(false);setContents(false);setSettings(false);setControlsOpen(false);setNotesOpen(false);setToolbar(null)}};document.addEventListener('keydown',escape);return()=>document.removeEventListener('keydown',escape)},[]);
  function noteClick(id:string){setSelectedNoteId(id);setTab('notes');if(state.mode!=='research')mode('research');setToolbar(null);}
@@ -72,6 +96,6 @@ export default function Reader(){
  {state.mode==='research'&&<aside className={`context-panel ${notesOpen?'mobile-open':''}`}><div className="context-top"><Label>На полях</Label><span className="context-mark">↔</span><button className="reader-context-close" aria-label="Закрыть заметки" onClick={()=>setNotesOpen(false)}>×</button></div><div className="context-tabs" role="group" aria-label="Контекст источника"><button className={tab==='notes'?'active':''} onClick={()=>setTab('notes')}>Заметки <span>{notes.length}</span></button><button className={tab==='links'?'active':''} onClick={()=>setTab('links')}>Связи <span>{source.categories.length}</span></button></div><div className="context-scroll">{tab==='notes'?<><NoteList notes={notes}/><button className="context-add" onClick={()=>{if(selection?.sourceId===source.id)composeNote(selection);else toast('Выдели текст или нажми + рядом с нужным абзацем.');}}>Добавить к фрагменту +</button></>:<div className="source-links"><p>Рабочие категории этого источника. Переход в атлас сохранит место чтения.</p>{source.categories.map(id=><button key={id} className="category-row" onClick={()=>openCategory(id)}>{categoryTitle(id)}<Arrow diagonal/></button>)}<Label>Связанный источник</Label>{compareSource&&<button className="linked-source" onClick={()=>mode('compare')}><strong>{compareSource.title}</strong><span>Сопоставить рядом →</span></button>}</div>}</div><div className="context-foot"><span className="save-indicator"/>Записи сохраняются в этом браузере</div></aside>}
  {state.mode==='compare'&&<aside className="comparison"><div className="comparison-head"><Label>{state.compareExcerpt?'Сохраненное выделение':'Рядом с источником'}</Label>{state.compareExcerpt&&<button className="small-link" onClick={()=>update({compareExcerpt:undefined})}>Выбрать документ</button>}</div>{state.compareExcerpt?<div className="compared-excerpt"><div className="demo-label">{state.sources.find(s=>s.id===state.compareExcerpt?.sourceId)?.demo?'Демонстрационный текст':'Мой источник'}</div><h2>{state.sources.find(s=>s.id===state.compareExcerpt?.sourceId)?.title}</h2><blockquote>{state.compareExcerpt.quote}</blockquote><button className="text-link" onClick={()=>composeNote(state.compareExcerpt)}>Заметка к этому фрагменту +</button></div>:<><label className="sr-only" htmlFor="compare-source">Источник для сопоставления</label><select id="compare-source" value={compareSource?.id??''} onChange={e=>{const next=state.sources.find(s=>s.id===e.target.value)!;update({compareSourceId:next.id,compareSectionId:next.sections[0]?.id??''})}}>{state.sources.filter(s=>s.format==='digital').map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select><label className="sr-only" htmlFor="compare-section">Раздел для сопоставления</label><select id="compare-section" value={compareSection?.id??''} onChange={e=>update({compareSectionId:e.target.value})}>{compareSource?.sections.map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select><div className="comparison-text" style={{fontSize:state.fontSize,lineHeight:state.lineHeight}}><span className="demo-label">{compareSource?.demo?'Демонстрационный материал':'Мой источник'}</span><h2>{compareSection?.title}</h2>{compareSection?.paragraphs.map(p=><p key={p.id}>{p.text}</p>)}</div></>}</aside>}
  </div>}
- {toolbar&&selection&&<div className="selection-toolbar" style={{left:toolbar.x,top:toolbar.y}} onMouseDown={e=>e.preventDefault()}><button onClick={()=>{composeNote(selection);setToolbar(null)}}>+ Заметка</button><button onClick={()=>{update({compareExcerpt:selection});mode('compare');setToolbar(null);window.getSelection()?.removeAllRanges()}}>Сопоставить</button><button onClick={()=>{setWilkins(true);setToolbar(null)}}>Вилкинс ↗</button></div>}
+ {toolbar&&selection&&<div className="selection-toolbar" style={{left:toolbar.x,top:toolbar.y}} onPointerDown={e=>e.preventDefault()} onMouseDown={e=>e.preventDefault()}><button onClick={saveQuotation}>Сохранить цитату</button><button onClick={()=>{composeNote(selection);setToolbar(null)}}>+ Заметка</button><button onClick={()=>{update({compareExcerpt:selection});mode('compare');setToolbar(null);window.getSelection()?.removeAllRanges()}}>Сопоставить</button><button onClick={()=>{setWilkins(true);setToolbar(null)}}>Вилкинс ↗</button></div>}
  </main>;
 }
