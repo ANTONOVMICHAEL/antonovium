@@ -38,7 +38,20 @@ function anchorVisible(at){const root=doc().getElementById(at.paragraph);if(!roo
 async function closeMenu(){if(doc().querySelector('.cloud-reader-menu').getAttribute('aria-expanded')==='true')doc().querySelector('.cloud-reader-menu').click();await pause(30)}
 async function chapter(index){await menu();button('Оглавление').click();await pause(30);const drawer=doc().querySelector('.contents-drawer'),items=[...drawer.querySelectorAll('button')].filter(b=>!b.classList.contains('icon-button'));items[index].click();await until(()=>position('fb2')?.page===1,'Chapter not restored');await closeMenu();await pause(70)}
 async function testFormat(format){await open(`reader-${format}`);await until(()=>page(format)===1,'Initial page not ready');
- await check(`${format}: 20 single forward taps, pointer + touch + compatibility click`,async()=>{for(let n=2;n<=21;n++){await gesture();await until(()=>page(format)===n,`Expected one step to ${n}, got ${page(format)}`);assert(position(format)?.page===n,`Saved page mismatch ${n}`);if(format==='pdf')await readyPDF(n)}await pause(220);assert(page(format)===21,'Late restoration moved reader back')});
+ await check(`${format}: 20 single forward taps, pointer + touch + compatibility click`,async()=>{
+  const originalChapter=format==='fb2'?position(format)?.chapter:null;
+  for(let n=2;n<=21;n++){
+   const previousScroll=reader().scrollTop+reader().scrollLeft;
+   await gesture();await until(()=>page(format)===n,`Expected one step to ${n}, got ${page(format)}`);
+   assert(position(format)?.page===n,`Saved page mismatch ${n}`);
+   if(format==='fb2'){
+    assert(position(format)?.chapter===originalChapter,`FB2 jumped to the next chapter before page ${n}`);
+    assert(reader().scrollTop+reader().scrollLeft>previousScroll+5,`FB2 did not reveal another screen of text on page ${n}`);
+   }
+   if(format==='pdf')await readyPDF(n);
+  }
+  await pause(220);assert(page(format)===21,'Late restoration moved reader back')
+ });
  await check(`${format}: 20 single backward taps`,async()=>{for(let n=20;n>=1;n--){await gesture({zone:'previous'});await until(()=>page(format)===n,`Backward expected ${n}, got ${page(format)}`);if(format==='pdf')await readyPDF(n)}assert(page(format)===1,'First-page boundary')});
  await check(`${format}: first page, center, swipe and cancelled gestures`,async()=>{await gesture({zone:'previous'});assert(page(format)===1,'Went before first page');await gesture({zone:'center'});assert(doc().querySelector('.cloud-reader-menu').getAttribute('aria-expanded')==='true','Center did not open tools');assert(page(format)===1,'Center changed page');await closeMenu();await gesture({zone:'center',dx:-100,dy:4});await until(()=>page(format)===2,'Left swipe failed');await gesture({zone:'center',dx:100,dy:3});await until(()=>page(format)===1,'Right swipe failed');for(const options of [{hold:380},{dy:90},{dx:80,dy:70},{multi:true},{cancel:true}]){await gesture(options);assert(page(format)===1,`Excluded gesture changed page: ${JSON.stringify(options)}`)}});
  await check(`${format}: keyboard and accessible page buttons`,async()=>{const el=reader();el.focus();el.dispatchEvent(new (win().KeyboardEvent)('keydown',{bubbles:true,key:'ArrowRight'}));await until(()=>page(format)===2,'Keyboard forward failed');el.dispatchEvent(new (win().KeyboardEvent)('keydown',{bubbles:true,key:'PageUp'}));await until(()=>page(format)===1,'Keyboard backward failed');await menu();doc().querySelector('.cloud-page-turn.next').click();await until(()=>page(format)===2,'Next button failed');doc().querySelector('.cloud-page-turn.previous').click();await until(()=>page(format)===1,'Previous button failed');await closeMenu()});
