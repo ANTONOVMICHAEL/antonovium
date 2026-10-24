@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   reader-regression:
@@ -39,3 +39,14 @@ jobs:
         run: npx playwright install --with-deps chromium webkit
       - name: Test page turns in real browser layouts
         run: node scripts/test-fb2-in-browsers.mjs
+      - name: Stage tested GitHub Pages bundle on candidate branch
+        run: |
+          cp -a dist/. ../
+          cd ..
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html assets
+          if ! git diff --cached --quiet; then
+            git commit -m "Stage FB2 phone-page reader build"
+            git push origin HEAD:refs/heads/fix/fb2-pages-not-chapters-20261024
+          fi
