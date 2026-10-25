@@ -35,18 +35,18 @@
 .wilkins-v2-head strong{font:650 22px/1.15 var(--ui)}
 .wilkins-v2-head>div>span{font-size:13px}
 .wilkins-v2-panel .wilkins-body{padding:0 24px 30px}
-.wilkins-presence{position:relative;isolation:isolate;min-height:294px;margin:18px 0 19px;padding:15px 18px 17px;overflow:clip;border:1px solid color-mix(in srgb,var(--primary) 23%,var(--line));border-radius:22px;background:radial-gradient(ellipse at 51% 43%,color-mix(in srgb,var(--paper) 65%,transparent),transparent 59%),linear-gradient(143deg,color-mix(in srgb,var(--primary) 14%,var(--paper)),color-mix(in srgb,var(--accent) 13%,var(--paper)) 72%,var(--paper));box-shadow:0 18px 35px color-mix(in srgb,var(--ink) 7%,transparent)}
+.wilkins-presence{position:relative;isolation:isolate;min-height:340px;margin:18px 0 19px;padding:15px 18px 17px;overflow:clip;border:1px solid color-mix(in srgb,var(--primary) 23%,var(--line));border-radius:22px;background:radial-gradient(ellipse at 51% 43%,color-mix(in srgb,var(--paper) 65%,transparent),transparent 59%),linear-gradient(143deg,color-mix(in srgb,var(--primary) 14%,var(--paper)),color-mix(in srgb,var(--accent) 13%,var(--paper)) 72%,var(--paper));box-shadow:0 18px 35px color-mix(in srgb,var(--ink) 7%,transparent)}
 .wilkins-presence:before{content:'';position:absolute;inset:30px -75px auto;aspect-ratio:1;border:1px solid color-mix(in srgb,var(--primary) 18%,transparent);border-radius:50%;transform:scaleY(.54);pointer-events:none}
 .wilkins-presence-top{display:flex;justify-content:space-between;gap:10px;align-items:center;color:var(--primary);font:650 11px/1.2 var(--ui);letter-spacing:.035em}
 .wilkins-presence-top>span:last-child{font-size:10px;color:var(--muted);text-align:right}
 .wilkins-presence-kicker{display:inline-flex;align-items:center;gap:7px}.wilkins-presence-kicker i{width:7px;height:7px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 4px color-mix(in srgb,var(--primary) 12%,transparent)}
-.wilkins-character{position:relative;display:grid;place-items:center;width:180px;height:174px;margin:5px auto 0;padding:0;border:0;background:none;cursor:pointer;touch-action:manipulation}
+.wilkins-character{position:relative;display:grid;place-items:center;width:220px;height:216px;margin:5px auto 0;padding:0;border:0;background:none;cursor:pointer;touch-action:manipulation}
 .wilkins-character:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:20px}
-.wilkins-character-aura{position:absolute;width:150px;height:142px;border:1px solid color-mix(in srgb,var(--primary) 30%,transparent);border-radius:45% 54% 47% 54%;transform:rotate(-17deg)}
+.wilkins-character-aura{position:absolute;width:204px;height:196px;border:1px solid color-mix(in srgb,var(--primary) 30%,transparent);border-radius:45% 54% 47% 54%;transform:rotate(-17deg)}
 .wilkins-character-portrait{position:relative;z-index:1;display:grid;place-items:center;width:107px;height:126px;overflow:hidden;border:1px solid color-mix(in srgb,var(--primary) 38%,var(--line));border-radius:48% 51% 44% 46%;background:var(--paper);box-shadow:0 14px 27px color-mix(in srgb,var(--ink) 17%,transparent);transform-origin:center 85%}
 .wilkins-character-portrait svg{width:57px;height:57px;color:var(--primary)}
-.wilkins-character-portrait.has-image{width:122px;height:150px;border-radius:38% 40% 28% 30%}
-.wilkins-character-portrait img{width:100%;height:100%;object-fit:cover;object-position:50% var(--portrait-y);pointer-events:none}
+.wilkins-character-portrait.has-image{width:172px;height:202px;border-radius:38% 40% 28% 30%}
+.wilkins-character-portrait img{width:100%;height:100%;object-fit:cover;object-position:50% var(--portrait-y);transform:scale(1.15);pointer-events:none}
 .wilkins-character-shadow{position:absolute;bottom:0;width:109px;height:9px;border-radius:50%;background:color-mix(in srgb,var(--ink) 16%,transparent);filter:blur(5px)}
 .wilkins-speech{position:relative;z-index:1;max-width:340px;margin:2px auto 0;padding:12px 15px;border:1px solid color-mix(in srgb,var(--primary) 18%,var(--line));border-radius:15px;background:var(--paper);box-shadow:0 8px 22px color-mix(in srgb,var(--ink) 5%,transparent)}
 .wilkins-speech-name{display:block;color:var(--primary);font:700 11px/1.2 var(--ui)}
