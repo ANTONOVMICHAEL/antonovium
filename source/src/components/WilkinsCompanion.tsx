@@ -28,8 +28,9 @@ export default function WilkinsCompanion({called,suspended,onDismiss,onDetails,o
  const talkTimer=useRef<ReturnType<typeof setTimeout>|null>(null),poseTimer=useRef<ReturnType<typeof setTimeout>|null>(null),scrollTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
  const reading=state.screen==='reader',bounds=companionBounds(viewport.width,viewport.height,reading),open=called&&!hidden;
  const source=[...state.sources,...local.books,...(cloud.authorized?cloud.books:[])].find(item=>item.id===state.sourceId);
+ const fragment=reading&&selection?.sourceId===state.sourceId?selection:null;
  const currentNotes=state.notes.filter(note=>note.sourceId===state.sourceId||note.relatedSourceIds?.includes(state.sourceId));
- const noteContext:Excerpt|undefined=selection??(source?{sourceId:source.id,sectionId:state.sectionId,quote:'',anchors:[],sourceTitle:source.title,localOnly:('local'in source&&source.local===true)||('localOnly'in source&&source.localOnly===true)}:undefined);
+ const noteContext:Excerpt|undefined=fragment??(source?{sourceId:source.id,sectionId:state.sectionId,quote:'',anchors:[],sourceTitle:source.title,localOnly:('local'in source&&source.local===true)||('localOnly'in source&&source.localOnly===true)}:undefined);
  const visible=!hidden&&!suspended&&(state.wilkinsActivity!=='request'||called);
  const environment=useRef({open,reading,parked,motion:motion&&!reduced,visible,bounds});
  environment.current={open,reading,parked,motion:motion&&!reduced,visible,bounds};
@@ -94,7 +95,7 @@ export default function WilkinsCompanion({called,suspended,onDismiss,onDetails,o
   if(priorScreen.current!==state.screen){priorScreen.current=state.screen;if(!open)setPose(basePose())}
  },[state.screen,source?.id,visible,open,reading,parked,state.wilkinsActivity,travel,say]);
  useEffect(()=>{const next=state.notes[0];if(next?.id!==priorNote.current){priorNote.current=next?.id;if(next&&!next.demo&&visible)say(`Запись «${next.title.slice(0,75)}» сохранена.`,'celebrate')}},[state.notes,visible,say]);
- useEffect(()=>{if(selection?.quote&&visible&&!open&&state.wilkinsActivity!=='request')say('Фрагмент выбран. Могу сохранить цитату или открыть заметку к нему.','think',6000)},[selection?.quote,visible,open,state.wilkinsActivity,say]);
+ useEffect(()=>{if(fragment?.quote&&visible&&!open&&state.wilkinsActivity!=='request')say('Фрагмент выбран. Могу сохранить цитату или открыть заметку к нему.','think',6000)},[fragment?.quote,visible,open,state.wilkinsActivity,say]);
  useEffect(()=>{
   const readingScroll=(event:Event)=>{const target=event.target;if(!(target instanceof Element)||!target.closest('.reader-scroll,.document-scroll,.ms-editor,.cloud-reader-scroll')||environment.current.open)return;stop();setTalk('');setScrolling(true);setPose('read');if(scrollTimer.current)clearTimeout(scrollTimer.current);scrollTimer.current=setTimeout(()=>{setScrolling(false);setPose(basePose())},900)};
   const visibility=()=>{if(document.hidden){stop();setPose('sleep')}else{setPose(basePose());place(position.current.x,position.current.y)}};
@@ -107,18 +108,18 @@ export default function WilkinsCompanion({called,suspended,onDismiss,onDetails,o
  function hide(){stop();setHidden(true);persist('hidden','yes');close()}
  function stay(value:boolean){setParked(value);persist('parked',value?'yes':'no');stop();setPose(value?'sleep':reading?'read':'idle')}
  function toggleMotion(){const next=!motion;setMotion(next);persist('motion',next?'on':'off')}
- function contextAnswer(){return source?`Сейчас открыто: «${source.title}». Связанных записей: ${currentNotes.length}.${selection?.quote?' Выбран фрагмент текста.':''}`:'Источник пока не открыт. Можно начать с библиотеки, своей записи или рукописи.'}
+ function contextAnswer(){return source?`Сейчас открыто: «${source.title}». Связанных записей: ${currentNotes.length}.${fragment?.quote?' Выбран фрагмент текста.':''}`:'Источник пока не открыт. Можно начать с библиотеки, своей записи или рукописи.'}
  function saveQuote(){
   if(reading&&askWilkinsReader('quote')){setAnswer('Цитата сохранена с привязкой к источнику.');gesture('celebrate');return}
-  if(!selection?.quote||!source||selection.sourceId!==source.id){setAnswer('Сначала выдели фрагмент в открытом источнике. Сохраню его дословно вместе с ориентиром.');gesture('think');return}
-  const quote=createQuotation({source,rawText:selection.quote,anchor:selection.fileAnchor,bibliography:getBibliography(source,state.bibliography?.find(item=>item.sourceId===source.id)),origin:'selection',sectionId:selection.sectionId,anchors:selection.anchors});
+  if(!fragment?.quote||!source){setAnswer('Сначала выдели фрагмент в открытом источнике. Сохраню его дословно вместе с ориентиром.');gesture('think');return}
+  const quote=createQuotation({source,rawText:fragment.quote,anchor:fragment.fileAnchor,bibliography:getBibliography(source,state.bibliography?.find(item=>item.sourceId===source.id)),origin:'selection',sectionId:fragment.sectionId,anchors:fragment.anchors});
   update(s=>({...s,notes:[quote,...s.notes]}));setSelection(null);window.getSelection()?.removeAllRanges();setAnswer('Цитата сохранена с привязкой к источнику.');gesture('celebrate');
  }
  function execute(command:WilkinsCommand){
   setList(false);setExamples(false);
   if(command.kind==='navigate'){close();navigate(command.screen);gesture('wave');return}
   if(command.kind==='search'){close();onSearch(command.query);gesture('think');return}
-  if(command.kind==='note'){close();composeNote(selection??(reading?getWilkinsReaderContext():undefined)??noteContext,undefined,undefined,command.body?{body:command.body}:undefined);return}
+  if(command.kind==='note'){close();composeNote(fragment??(reading?getWilkinsReaderContext():undefined)??noteContext,undefined,undefined,command.body?{body:command.body}:undefined);return}
   if(command.kind==='quote'){saveQuote();return}
   if(command.kind==='notes'){if(reading&&askWilkinsReader('notes')){close();return}setList(true);setAnswer(currentNotes.length?`Вот записи к открытому источнику: ${currentNotes.length}.`:'К текущему источнику пока нет записей.');gesture('think');return}
   if(command.kind==='resume'){if(source){close();openSource(source.id);gesture('read')}else setAnswer('Сначала выбери книгу в библиотеке.');return}
@@ -135,7 +136,7 @@ export default function WilkinsCompanion({called,suspended,onDismiss,onDetails,o
   setAnswer('С такой просьбой пока не справлюсь. Могу найти материал в твоей библиотеке, открыть источник, записать мысль, показать записи или поставить закладку.');setExamples(true);gesture('think');
  }
  function submit(event:FormEvent){event.preventDefault();if(!request.trim())return;const value=request;setRequest('');execute(parseWilkinsCommand(value))}
- function call(){stop();setAnchor({...position.current});setWilkins(true);setAnswer(selection?.quote?'Фрагмент у меня перед глазами. Сохраним его или запишем твою мысль?':reading?'Я здесь. Записать мысль, найти материал или показать записи?':'Я здесь. Что делаем?');gesture('wave')}
+ function call(){stop();setAnchor({...position.current});setWilkins(true);setAnswer(fragment?.quote?'Фрагмент у меня перед глазами. Сохраним его или запишем твою мысль?':reading?'Я здесь. Записать мысль, найти материал или показать записи?':'Я здесь. Что делаем?');gesture('wave')}
 
  if(!visible)return null;
  const chatWidth=Math.min(340,viewport.width-24),chatLeft=Math.max(12,Math.min(viewport.width-chatWidth-12,anchor.x+bounds.width/2-chatWidth/2));
@@ -149,10 +150,10 @@ export default function WilkinsCompanion({called,suspended,onDismiss,onDetails,o
   </div>
   {talk&&!open&&<div className="wilkins-companion-hint" style={{left:hintLeft,bottom:Math.max(12,Math.min(viewport.height-170,viewport.height-position.current.y+5)),width:hintWidth}} role="status"><button className="wilkins-hint-close" aria-label="Скрыть реплику Вилкинса" onClick={()=>setTalk('')}>×</button><p>{talk}</p><button className="wilkins-hint-call" onClick={call}>Позвать ↗</button></div>}
   {open&&<section ref={chat} className="wilkins-conversation" role="dialog" aria-modal="false" aria-label="Поговорить с Вилкинсом" style={{left:chatLeft,width:chatWidth,...conversationPosition}}>
-   <header><div><i/><strong>Вилкинс</strong><span>{selection?.quote?'рядом с фрагментом':reading?'в читальном зале':'в лаборатории'}</span></div><button aria-label="Закрыть разговор с Вилкинсом" onClick={close}>×</button></header>
+   <header><div><i/><strong>Вилкинс</strong><span>{fragment?.quote?'рядом с фрагментом':reading?'в читальном зале':'в лаборатории'}</span></div><button aria-label="Закрыть разговор с Вилкинсом" onClick={close}>×</button></header>
    <div className="wilkins-conversation-content"><p className="wilkins-answer" role="status" aria-live="polite">{answer}</p>
     {list&&<div className="wilkins-note-list">{currentNotes.slice(0,6).map(note=><button key={note.id} onClick={()=>{close();openNote(note)}}><strong>{note.title}</strong><span>{note.body.slice(0,90)}</span></button>)}</div>}
-    <div className="wilkins-requests"><button onClick={()=>execute({kind:'note'})}>Записать мысль</button>{selection?.quote?<button onClick={()=>execute({kind:'quote'})}>Сохранить цитату</button>:<button onClick={()=>execute({kind:'notes'})}>Мои записи</button>}<button onClick={()=>execute({kind:'walk'})}>Прогуляйся</button>{reading&&<button onClick={()=>execute({kind:'reader',action:'bookmark'})}>Поставь закладку</button>}</div>
+    <div className="wilkins-requests"><button onClick={()=>execute({kind:'note'})}>Записать мысль</button>{fragment?.quote?<button onClick={()=>execute({kind:'quote'})}>Сохранить цитату</button>:<button onClick={()=>execute({kind:'notes'})}>Мои записи</button>}<button onClick={()=>execute({kind:'walk'})}>Прогуляйся</button>{reading&&<button onClick={()=>execute({kind:'reader',action:'bookmark'})}>Поставь закладку</button>}</div>
     {examples&&<div className="wilkins-command-examples"><span>Например</span>{['Найди недобросовестность','Запиши мысль: проверить основания оценки','Открой рукопись','Что сейчас в работе?','Не мешай'].map(value=><button key={value} onClick={()=>{setRequest(value);chat.current?.querySelector('input')?.focus()}}>{value}</button>)}<p>Научные ответы пока не формулирую. Работаю с действиями и сохраненными материалами.</p></div>}
     <form onSubmit={submit}><label className="sr-only" htmlFor="wilkins-request">Просьба Вилкинсу</label><input id="wilkins-request" maxLength={2000} autoComplete="off" placeholder="Вилкинс, найди…" value={request} onChange={event=>setRequest(event.target.value)}/><button aria-label="Попросить Вилкинса" disabled={!request.trim()} type="submit">↑</button></form>
    </div>
