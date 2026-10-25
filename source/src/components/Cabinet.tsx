@@ -3,9 +3,10 @@ import { useCloud } from '../cloud';
 import { useLocalBooks, localProgress } from '../localBooks';
 import { Arrow } from './UI';
 import { CloudUploadButton } from './CloudBooks';
+import { WilkinsAvatar } from './Wilkins';
 
 export default function Cabinet() {
-  const { state, openSource, openResearch, openNote, navigate, composeNote } = useApp();
+  const { state, openSource, openResearch, openNote, navigate, composeNote, setWilkins } = useApp();
   const cloud = useCloud();
   const local = useLocalBooks();
   const book = [...local.books, ...cloud.books].find(item => item.id === state.sourceId);
@@ -92,6 +93,7 @@ export default function Cabinet() {
         <button onClick={() => navigate('manuscripts')} aria-label="Открыть рукопись"><Arrow diagonal/></button>
       </section>
       <nav className="cabinet-v3-shortcuts" aria-label="Рабочие пространства">
+        <button className="cabinet-v3-companion" onClick={() => setWilkins(true)}><WilkinsAvatar/><span><strong>Вилкинс рядом</strong><small>{current ? 'Открыть действия для текущего источника' : 'Начать с источника или собственной мысли'}</small></span><Arrow diagonal/></button>
         <button onClick={() => navigate('desk')}>Исследовательский стол <Arrow diagonal/></button>
         <button onClick={() => navigate('atlas')}>Интеллектуальный атлас <Arrow diagonal/></button>
       </nav>

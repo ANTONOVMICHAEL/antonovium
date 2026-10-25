@@ -47,6 +47,12 @@ export default function Wilkins({onClose}:{onClose:()=>void}){
  const [motion,setMotion]=useState(()=>localStorage.getItem('antonovium.wilkins.motion')!=='off');
  const [activity,setActivity]=useState<'open'|'success'|'error'>('open');
  const panel=useRef<HTMLElement>(null);
+ const fileInput=useRef<HTMLInputElement>(null);
+ const [reaction,setReaction]=useState(0);
+ const [imagePosition,setImagePosition]=useState(()=>{
+  const saved=Number(localStorage.getItem('antonovium.wilkins.imagePosition'));
+  return Number.isFinite(saved)&&saved>=0&&saved<=100?saved:38;
+ });
  const avatar=useAvatar();
  const activeId=selection?.sourceId??state.sourceId;
  const source=state.sources.find(s=>s.id===activeId);
@@ -55,6 +61,11 @@ export default function Wilkins({onClose}:{onClose:()=>void}){
  const currentTitle=source?.title??book?.title;
  const notes=state.notes.filter(n=>n.sourceId===activeId||n.relatedSourceIds?.includes(activeId)),quotations=notes.filter(note=>note.citation?.sourceId===activeId),bibliography=state.bibliography?.find(record=>record.sourceId===activeId);
  const noteContext=selection??(currentTitle?{sourceId:activeId,sectionId:section?.id??'',quote:'',anchors:[],sourceTitle:currentTitle,localOnly:!!book?.local||source?.localOnly}:undefined);
+ const messages=selection?.quote?
+  ['Фрагмент выделен. Сохранить его вместе с мыслью?',`К этому источнику уже есть записей: ${notes.length}.`,'Можно перейти от цитаты к собственной заметке.']:
+  currentTitle?['Источник открыт. Продолжим чтение?',`К источнику сохранено заметок: ${notes.length}.`,'Могу открыть записи или помочь сформулировать запрос.']:
+  ['Начнем с источника или запишем мысль?','Книгу можно добавить прямо с устройства.','Здесь доступны заметки и научная картотека.'];
+ const spoken=messages[reaction%messages.length];
  useEffect(()=>{if(activity==='open')return;const timer=setTimeout(()=>setActivity('open'),1500);return()=>clearTimeout(timer)},[activity]);
  useEffect(()=>{const prior=document.activeElement as HTMLElement|null;const previousOverflow=document.body.style.overflow;document.body.style.overflow='hidden';panel.current?.querySelector<HTMLElement>('.wilkins-v2-head .icon-button')?.focus();
   const key=(event:KeyboardEvent)=>{if(event.key!=='Tab'||!panel.current)return;const focusables=Array.from(panel.current.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,[tabindex="0"]')).filter(el=>el.getClientRects().length>0);const first=focusables[0],last=focusables.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus()}};
@@ -73,12 +84,25 @@ export default function Wilkins({onClose}:{onClose:()=>void}){
   setActivity('success');
  }
  return <aside ref={panel} className={`wilkins-panel wilkins-v2-panel ${motion?'motion-on':'motion-off'}`} data-activity={activity} role="dialog" aria-modal="true" aria-label="Вилкинс — рабочий контекст">
-  <div className="wilkins-head wilkins-v2-head"><WilkinsAvatar/><div><strong>Вилкинс</strong><span>Контекст исследования</span></div><button className="icon-button" aria-label="Закрыть Вилкинса" onClick={onClose}>×</button></div>
-  <div className="wilkins-body"><div className="wilkins-v2-status"><span className="status-line"/>Рабочие действия доступны · интеллектуальный анализ не подключен</div>
+  <div className="wilkins-head wilkins-v2-head"><div><strong>Вилкинс</strong><span>Рядом с твоей работой</span></div><button className="icon-button" aria-label="Закрыть Вилкинса" onClick={onClose}>×</button></div>
+  <div className="wilkins-body">
+   <section className="wilkins-presence" aria-label="Вилкинс">
+    <div className="wilkins-presence-top"><span className="wilkins-presence-kicker"><i/> НА СВЯЗИ</span><span>{currentTitle?'ИСТОЧНИК ОТКРЫТ':'РАБОЧЕЕ ПРОСТРАНСТВО'}</span></div>
+    <button type="button" className="wilkins-character" onClick={()=>{setReaction(v=>v+1);setActivity('success')}} aria-label="Обратиться к Вилкинсу">
+     <span className="wilkins-character-aura" aria-hidden="true"/>
+     <span key={reaction} className={`wilkins-character-portrait ${avatar?'has-image':''}`} style={{'--portrait-y':`${imagePosition}%`} as React.CSSProperties}>{avatar?<img src={avatar} alt=""/>:<WMark/>}</span>
+     <span className="wilkins-character-shadow" aria-hidden="true"/>
+    </button>
+    <div className="wilkins-speech" role="status" aria-live="polite"><span className="wilkins-speech-name">Вилкинс</span><p>{spoken}</p></div>
+    {!avatar&&<button type="button" className="wilkins-presence-upload" onClick={()=>fileInput.current?.click()}>Добавить фото Вилкинса <span aria-hidden="true">↗</span></button>}
+    {avatarError&&<p className="wilkins-presence-error" role="alert">{avatarError}</p>}
+    <input ref={fileInput} className="wilkins-visually-hidden" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Добавить фото Вилкинса" onChange={e=>void chooseAvatar(e)}/>
+   </section>
+   <div className="wilkins-v2-status"><span className="status-line"/>Подсказывает доступные действия на основе открытого материала; интеллектуальный анализ не подключен.</div>
    <div className="wilkins-v2-context"><Label>Сейчас в работе</Label><button onClick={()=>{if(currentTitle)openSource(activeId,section?.id);onClose()}} disabled={!currentTitle}><strong>{currentTitle??'Источник не выбран'}</strong><span>{section?.title??(book?(book.local?'Книга на этом устройстве':'Книга в личной библиотеке'):'Открой материал в библиотеке')} ↗</span></button>{selection?.quote&&<blockquote>{selection.quote}</blockquote>}</div>
    <div className="wilkins-v2-actions"><button onClick={()=>{composeNote(noteContext);onClose()}}>{book?'Записать мысль о книге':'Записать собственную мысль'} <span>+</span></button><button disabled={!currentTitle} onClick={()=>{openSource(activeId);update({mode:'research'});onClose();toast(`Заметок к источнику: ${notes.length}`)}}>Заметки к источнику · {notes.length} <span>↗</span></button><button onClick={()=>{navigate('memory');onClose()}}>Научная память <span>↗</span></button>{(state.wilkinsActivity!=='request'||selection)&&source?.categories.slice(0,state.wilkinsActivity==='active'?4:2).map(id=><button key={id} onClick={()=>{openCategory(id);onClose()}}>{categoryTitle(id)} <span>↗</span></button>)}</div>
    {currentTitle&&<div className="wilkins-v2-context"><Label>Проверяемые материалы</Label><p>Сохранено цитат: {quotations.length}. Сверено с оригиналом: {quotations.filter(note=>note.citation?.verification==='user-confirmed').length}.</p>{bibliography?<><p>{formatBibliography(bibliography,state.bibliographicTemplates?.bibliography??state.bibliographyTemplate)}</p><p className="fineprint">Подтверждено реквизитов: {bibliography.confirmedFields.length}. {bibliography.localOnly?'Карточка хранится на этом устройстве.':''}</p></>:<p>Библиографическая карточка пока не заполнена.</p>}<p className="fineprint">Это сводка сохраненных данных, без оценки содержания источника.</p></div>}
-   <details className="wilkins-v2-details"><summary>Присутствие и изображение</summary><label className="assistant-activity">Показывать контекст<select value={state.wilkinsActivity} onChange={e=>update({wilkinsActivity:e.target.value as typeof state.wilkinsActivity})}><option value="request">Только по запросу</option><option value="adaptive">При работе с фрагментом</option><option value="active">Подробнее при чтении</option></select></label><label className="wilkins-v2-motion"><input type="checkbox" checked={motion} onChange={e=>{setMotion(e.target.checked);localStorage.setItem('antonovium.wilkins.motion',e.target.checked?'on':'off')}}/>Небольшие движения интерфейса</label><div className="wilkins-v2-upload"><p>Для личного использования можно добавить собственное изображение. Файл остается в этом браузере и не публикуется на GitHub.</p><label className="button outline">Выбрать изображение<input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>void chooseAvatar(e)}/></label>{avatar&&<button className="text-link" onClick={()=>void removeAvatar()}>Удалить изображение с устройства</button>}{avatarError&&<p role="alert">{avatarError}</p>}</div></details>
+   <details className="wilkins-v2-details"><summary>Присутствие и изображение</summary><label className="assistant-activity">Показывать контекст<select value={state.wilkinsActivity} onChange={e=>update({wilkinsActivity:e.target.value as typeof state.wilkinsActivity})}><option value="request">Только по запросу</option><option value="adaptive">При работе с фрагментом</option><option value="active">Подробнее при чтении</option></select></label><label className="wilkins-v2-motion"><input type="checkbox" checked={motion} onChange={e=>{setMotion(e.target.checked);localStorage.setItem('antonovium.wilkins.motion',e.target.checked?'on':'off')}}/>Небольшие движения интерфейса</label><div className="wilkins-v2-upload"><p>Для личного использования можно добавить собственное изображение. Файл остается в этом браузере и не публикуется на GitHub.</p><button className="button outline" type="button" onClick={()=>fileInput.current?.click()}>{avatar?'Заменить изображение':'Выбрать изображение'}</button>{avatar&&<><label className="wilkins-image-position">Положение изображения <input type="range" min="0" max="100" value={imagePosition} onChange={e=>{const value=Number(e.target.value);setImagePosition(value);localStorage.setItem('antonovium.wilkins.imagePosition',String(value))}}/></label><button className="text-link" onClick={()=>void removeAvatar()}>Удалить изображение с устройства</button></>}{avatarError&&<p role="alert">{avatarError}</p>}</div></details>
    <details className="wilkins-v2-details"><summary>Подготовить исследовательский запрос</summary><p>Запрос собирается локально. Ответ языковой модели не запрашивается.</p><form className="wilkins-prompt" onSubmit={prepare}><label>Что нужно проверить?<textarea value={prompt} onChange={e=>setPrompt(e.target.value)} rows={3} placeholder="Сформулируй исследовательский вопрос…" required/></label><button className="button outline" disabled={!prompt.trim()}>Собрать с контекстом →</button></form>{prepared&&<div className="prepared-prompt"><Label>Подготовленный запрос</Label><textarea aria-label="Запрос с контекстом" value={prepared} onChange={e=>setPrepared(e.target.value)} rows={8}/><button className="text-link" onClick={async()=>{try{await navigator.clipboard.writeText(prepared);toast('Запрос скопирован')}catch{toast('Буфер обмена недоступен. Выдели текст вручную.')}}}>Скопировать текст ↗</button></div>}</details>
   </div>
  </aside>;

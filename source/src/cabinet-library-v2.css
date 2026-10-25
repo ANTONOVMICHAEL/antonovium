@@ -14,7 +14,7 @@
 .cabinet-v3-current-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,31%);min-height:325px}
 .cabinet-v3-source{padding:clamp(24px,3vw,48px);display:flex;flex-direction:column;align-items:flex-start;min-width:0}
 .cabinet-v3-meta{font:500 13px/1.4 var(--sans);letter-spacing:0;color:var(--primary);text-transform:none}
-.cabinet-v3-source h2{font:400 clamp(28px,2.8vw,42px)/1.25 var(--reading);letter-spacing:-.035em;max-width:850px;margin:18px 0 18px;overflow-wrap:anywhere}
+.cabinet-v3-source h2{font:550 clamp(28px,2.8vw,42px)/1.2 var(--display);letter-spacing:-.035em;max-width:850px;margin:18px 0 18px;overflow-wrap:anywhere}
 .cabinet-v3-author{font-size:13px;color:var(--muted);line-height:1.5}
 .cabinet-v3-location{font-size:12px;color:var(--muted);margin:13px 0 28px;line-height:1.5}
 .cabinet-v3-location span{color:var(--accent);font-weight:700}
@@ -50,6 +50,12 @@
 .cabinet-v3-shortcuts{display:flex;flex-direction:column;justify-content:center}
 .cabinet-v3-shortcuts button{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;border-bottom:1px solid var(--line);font:600 12px/1.3 var(--sans);text-align:left}
 .cabinet-v3-shortcuts button .arrow{font-size:17px;color:var(--primary)}
+.cabinet-v3-shortcuts .cabinet-v3-companion{display:grid;grid-template-columns:56px minmax(0,1fr) auto;align-items:center;gap:15px;margin-bottom:9px;padding:14px 17px;min-height:100px;border:1px solid var(--line);border-radius:18px;background:radial-gradient(circle at 12% 45%,color-mix(in srgb,var(--primary) 15%,var(--paper)),transparent 46%),var(--paper);box-shadow:0 12px 28px color-mix(in srgb,var(--ink) 6%,transparent);transition:transform .2s ease,box-shadow .2s ease}
+.cabinet-v3-shortcuts .cabinet-v3-companion:hover{transform:translateY(-2px);box-shadow:0 18px 32px color-mix(in srgb,var(--ink) 10%,transparent)}
+.cabinet-v3-companion .wilkins-v2-avatar{width:54px;height:54px;background:var(--paper)}
+.cabinet-v3-companion>span:nth-child(2){display:flex;flex-direction:column;gap:6px;min-width:0}
+.cabinet-v3-companion strong{font:650 16px/1.2 var(--display);color:var(--ink)}
+.cabinet-v3-companion small{font:400 12px/1.4 var(--ui);color:var(--muted)}
 
 .library-v3-head{padding-bottom:23px}
 .library-v3-searchbar{display:flex;align-items:stretch;gap:14px;justify-content:space-between;padding:21px 0;border-bottom:1px solid var(--line)}
