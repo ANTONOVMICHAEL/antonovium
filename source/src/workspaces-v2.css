@@ -35,7 +35,7 @@
 .wilkins-v2-head strong{font:650 22px/1.15 var(--ui)}
 .wilkins-v2-head>div>span{font-size:13px}
 .wilkins-v2-panel .wilkins-body{padding:0 24px 30px}
-.wilkins-presence{position:relative;isolation:isolate;min-height:294px;margin:18px 0 19px;padding:15px 18px 17px;overflow:hidden;border:1px solid color-mix(in srgb,var(--primary) 23%,var(--line));border-radius:22px;background:radial-gradient(ellipse at 51% 43%,color-mix(in srgb,var(--paper) 65%,transparent),transparent 59%),linear-gradient(143deg,color-mix(in srgb,var(--primary) 14%,var(--paper)),color-mix(in srgb,var(--accent) 13%,var(--paper)) 72%,var(--paper));box-shadow:0 18px 35px color-mix(in srgb,var(--ink) 7%,transparent)}
+.wilkins-presence{position:relative;isolation:isolate;min-height:294px;margin:18px 0 19px;padding:15px 18px 17px;overflow:clip;border:1px solid color-mix(in srgb,var(--primary) 23%,var(--line));border-radius:22px;background:radial-gradient(ellipse at 51% 43%,color-mix(in srgb,var(--paper) 65%,transparent),transparent 59%),linear-gradient(143deg,color-mix(in srgb,var(--primary) 14%,var(--paper)),color-mix(in srgb,var(--accent) 13%,var(--paper)) 72%,var(--paper));box-shadow:0 18px 35px color-mix(in srgb,var(--ink) 7%,transparent)}
 .wilkins-presence:before{content:'';position:absolute;inset:30px -75px auto;aspect-ratio:1;border:1px solid color-mix(in srgb,var(--primary) 18%,transparent);border-radius:50%;transform:scaleY(.54);pointer-events:none}
 .wilkins-presence-top{display:flex;justify-content:space-between;gap:10px;align-items:center;color:var(--primary);font:650 11px/1.2 var(--ui);letter-spacing:.035em}
 .wilkins-presence-top>span:last-child{font-size:10px;color:var(--muted);text-align:right}
