@@ -15,6 +15,7 @@
     "check:edge": "node scripts/check-edge.mjs",
     "check:published": "node scripts/check-published.mjs",
     "test:reader": "node scripts/test-reader-gestures.mjs",
+    "test:wilkins": "node scripts/test-wilkins.mjs",
     "test:memory": "node scripts/test-memory-domain.mjs && node scripts/test-memory-index.mjs && node scripts/test-quote-anchors.mjs && node scripts/test-memory-cards.mjs && node scripts/test-memory-reader.mjs && node scripts/test-book-promotion.mjs"
   },
   "dependencies": {

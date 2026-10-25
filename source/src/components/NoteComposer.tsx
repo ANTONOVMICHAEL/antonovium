@@ -8,10 +8,10 @@ import { useCloud } from '../cloud';
 import { useLocalBooks } from '../localBooks';
 import { citationLocator, createQuotation, evidenceLabels, getBibliography } from '../scientificMemory';
 
-export default function NoteComposer({excerpt,note,researchId,onClose}:{excerpt?:Excerpt;note?:Note;researchId?:string;onClose:()=>void}){
+export default function NoteComposer({excerpt,note,researchId,draft,onClose}:{excerpt?:Excerpt;note?:Note;researchId?:string;draft?:{body:string};onClose:()=>void}){
  const {state,update,toast,setSelectedNoteId,setSelection}=useApp();
  const cloud=useCloud(),local=useLocalBooks(),originalCitation=note?.citation??excerpt?.citation,fixedSourceId=note?.sourceId??excerpt?.sourceId;
- const [title,setTitle]=useState(note?.title??''),[body,setBody]=useState(note?.body??'');
+ const [title,setTitle]=useState(note?.title??''),[body,setBody]=useState(note?.body??draft?.body??'');
  const [kind,setKind]=useState<NoteKind>(note?.kind??'thought'),[tags,setTags]=useState<string[]>(note?.categories??[]);
  const [research,setResearch]=useState(note?.researchId??researchId??''),[locator,setLocator]=useState(note?.locator??excerpt?.locator??'');
  const [evidenceType,setEvidenceType]=useState<EvidenceType>(originalCitation?'quotation':note?.evidenceType??'note');

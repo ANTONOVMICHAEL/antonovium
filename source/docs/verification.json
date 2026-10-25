@@ -38,7 +38,19 @@
       "status": "passed"
     },
     {
-      "name": "Wilkins 3D reacts to touch, preserves local controls and labels unavailable AI",
+      "name": "Wilkins lives on the workspace and opens a nonmodal conversation",
+      "status": "passed"
+    },
+    {
+      "name": "A Wilkins request opens real search with the supplied words",
+      "status": "passed"
+    },
+    {
+      "name": "A dictated thought remains a draft with its source until the user saves",
+      "status": "passed"
+    },
+    {
+      "name": "Wilkins can be hidden, recalled and configured without losing reading state",
       "status": "passed"
     },
     {

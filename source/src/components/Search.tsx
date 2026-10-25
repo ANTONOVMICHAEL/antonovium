@@ -21,10 +21,10 @@ function Highlight({text,query}:{text:string;query:string}){
 }
 const statusLabel=(doc:IndexProgress)=>doc.queued?'В очереди':doc.status==='processing'?'Индексирование':doc.status==='ready'?'Готово':doc.status==='no_text'?'Нет текстового слоя':doc.status==='size_limit'?'Достигнут бюджет':doc.status==='partial'?'Частичный индекс':'Ошибка индексирования';
 
-export default function Search({onClose}:{onClose:()=>void}){
+export default function Search({onClose,initialQuery=''}:{onClose:()=>void;initialQuery?:string}){
  const {state,update,openSource,openCategory,openResearch,openNote,navigate,setFocusParagraph,toast}=useApp();
  const cloud=useCloud(),local=useLocalBooks(),documents=useIndexProgress(),owner=cloud.authorized?cloud.session!.user.id:'';
- const [q,setQ]=useState(''),[scope,setScope]=useState<Scope>('all'),[author,setAuthor]=useState(''),[bookId,setBookId]=useState(''),[exact,setExact]=useState(false),[searching,setSearching]=useState(false),[error,setError]=useState(''),[fileResults,setFileResults]=useState<{owner:string;hits:LibraryHit[]}>({owner:'',hits:[]});
+ const [q,setQ]=useState(initialQuery),[scope,setScope]=useState<Scope>('all'),[author,setAuthor]=useState(''),[bookId,setBookId]=useState(''),[exact,setExact]=useState(false),[searching,setSearching]=useState(false),[error,setError]=useState(''),[fileResults,setFileResults]=useState<{owner:string;hits:LibraryHit[]}>({owner:'',hits:[]});
  const request=useRef(0),query=exact&&q.trim()?`"${q.replace(/"/g,'').trim()}"`:q.trim(),queryError=(query.match(/"/g)?.length??0)%2?'Закрой кавычки вокруг точной фразы':'';
  const books=useMemo(()=>{const aliases=owner?sharedBookAliases(owner):{};return[...local.books.filter(book=>!aliases[book.id]),...(owner?cloud.books:[])].map(book=>{const b=state.bibliography?.find(item=>item.sourceId===book.id);return b?{...book,originalAuthor:book.author,title:b.title||book.title,author:b.authors.length?b.authors.join('; '):book.author}:book})},[local.books,cloud.books,state.bibliography,owner]);
  useEffect(()=>{const canonical=owner&&sharedBookAliases(owner)[bookId];if(canonical)setBookId(canonical)},[owner,bookId,local.books]);

@@ -14,8 +14,9 @@ import {ReaderGestures,readerInteractive,type ReaderContact} from '../readerGest
 import {fb2Geometry,visibleFB2Position,restoreFB2Position} from '../fb2Pagination';
 import {createQuotation,getBibliography,validFileAnchor} from '../scientificMemory';
 import {locateQuote,quoteContext,showPDFQuoteMatch,verifiedFB2Anchor} from '../quoteAnchors';
+import {registerWilkinsReader,announceWilkins} from '../wilkinsCompanion';
 export default function BookReader({book}:{book:Book}){
- const c=useCloud(),{state,update,navigate,composeNote,toast,focusParagraph,setFocusParagraph,setSelectedNoteId,setWilkins}=useApp();
+ const c=useCloud(),{state,update,navigate,composeNote,toast,focusParagraph,setFocusParagraph,setSelectedNoteId,setWilkins,setSelection}=useApp();
  const[anchor,setAnchor]=useState<FileAnchor>({format:book.format,page:1}),[pdf,setPDF]=useState<PDFDocumentProxy|null>(null),[fb2,setFB2]=useState<FB2Document|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[reload,setReload]=useState(0),[zoom,setZoom]=useState(1),[contents,setContents]=useState(false),[settings,setSettings]=useState(false),[selected,setSelected]=useState<{quote:string;anchor:FileAnchor;contextBefore?:string;contextAfter?:string}|null>(null),[search,setSearch]=useState(''),[results,setResults]=useState<{page:number;text:string}[]>([]),[searching,setSearching]=useState(false),[hasText,setHasText]=useState(true),[visiblePage,setVisiblePage]=useState(1),[quoteNotice,setQuoteNotice]=useState('');
  const requestedQuote=useRef<FileAnchor|null>(null),focusCleanup=useRef<(()=>void)|null>(null);
  const scroll=useRef<HTMLDivElement>(null),documentRef=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),textLayer=useRef<HTMLDivElement>(null),revision=useRef(0),touched=useRef(false),current=useRef(anchor),saveTimer=useRef<ReturnType<typeof setTimeout>|null>(null),restoring=useRef(false),latestRecords=useRef(c.records),selectionTimer=useRef<ReturnType<typeof setTimeout>|null>(null);latestRecords.current=c.records;
@@ -193,6 +194,21 @@ export default function BookReader({book}:{book:Book}){
  }
  turnHandler.current=fb2Turn;
  function pdfTurn(direction:number){if(!pdf)return;const next=(current.current.page??1)+direction;if(next>=1&&next<=pdf.numPages)move({format:'pdf',page:next})}
+ useEffect(()=>registerWilkinsReader(action=>{
+  if(action==='notes'){setNotesOpen(true);return true}
+  if(action==='quote'){if(!selected)return false;saveQuotation();return true}
+  if(loading)return false;
+  if(action==='bookmark'){void bookmark(current.current).then(()=>announceWilkins('Закладка на месте. Вернемся к ней из оглавления.','celebrate')).catch(e=>{setError((e as Error).message);announceWilkins('Закладку сохранить не удалось. Сообщение об ошибке показано в ридере.','think')});return true}
+  if(layout!=='pages')return false;
+  if(book.format==='pdf'){
+   const page=(current.current.page??1)+(action==='next'?1:-1);
+   if(pdf&&(page<1||page>pdf.numPages)){announceWilkins(page<1?'Мы в начале книги.':'Последняя страница. Дальше книга заканчивается.','read');return true}
+   pdfTurn(action==='next'?1:-1);
+  }else fb2Turn(action==='next'?1:-1);
+  return true;
+ },()=>{const at=selected?.anchor??current.current;return{sourceId:book.id,sectionId:book.format==='pdf'?`pdf:${at.page}`:at.chapter??'',quote:selected?.quote??'',anchors:[],fileAnchor:at,sourceTitle:book.title,localOnly:!!book.local,locator:book.format==='pdf'?`Страница PDF ${at.page}`:`Глава: ${chapter?.title??''}`}}));
+ useEffect(()=>{setSelection(selected?{sourceId:book.id,sectionId:book.format==='pdf'?`pdf:${selected.anchor.page}`:selected.anchor.chapter??'',quote:selected.quote,anchors:[],fileAnchor:selected.anchor,sourceTitle:book.title,localOnly:!!book.local}:null)},[selected,book.id,setSelection]);
+ useEffect(()=>()=>setSelection(null),[book.id,setSelection]);
  function onReaderKey(e:React.KeyboardEvent){if(layout!=='pages'||!scroll.current?.contains(e.target as Node)||e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||readerInteractive(e.target)||window.getSelection()?.toString())return;if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();book.format==='pdf'?pdfTurn(1):fb2Turn(1)}else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();book.format==='pdf'?pdfTurn(-1):fb2Turn(-1)}}
  function selectionActive(){const selection=window.getSelection();return !!selection&&!selection.isCollapsed&&!!selection.toString()}
  function gestureBlocked(target:EventTarget|null){return layout!=='pages'||loading||readerInteractive(target)||selectionActive()||book.format==='pdf'&&(zoom>1||(window.visualViewport?.scale??1)>1.01)}

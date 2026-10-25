@@ -4,7 +4,7 @@ export interface WorkspaceContext {
  state:SavedState; update:(change:Partial<SavedState>|((s:SavedState)=>SavedState))=>void;
  navigate:(screen:Screen)=>void; openSource:(id:string,section?:string,paragraph?:string)=>void;
  openCategory:(id:string)=>void; openResearch:(id:string)=>void;
- composeNote:(excerpt?:Excerpt,note?:Note,researchId?:string)=>void;
+ composeNote:(excerpt?:Excerpt,note?:Note,researchId?:string,draft?:{body:string})=>void;
  openNote:(note:Note)=>void; toast:(message:string)=>void;
  selection:Excerpt|null; setSelection:(value:Excerpt|null)=>void;
  focusParagraph:string|null; setFocusParagraph:(id:string|null)=>void;

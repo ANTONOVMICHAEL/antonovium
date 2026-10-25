@@ -1,19 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
 import WilkinsIllustration from './WilkinsIllustration';
+import type { WilkinsPose } from '../wilkinsCompanion';
 
-type Props = { motion: boolean; reaction: number; onInteract: () => void };
+type Props = { motion: boolean; reaction: number; onInteract: () => void; pose?: WilkinsPose; facing?: number;
+  onMove?: (dx:number,dy:number) => void; onGrab?: () => void; onDrop?: () => void };
 
 /** A locally modelled, real-time character. No film stills or remote character files are bundled. */
-export default function Wilkins3D({ motion, reaction, onInteract }: Props) {
+export default function Wilkins3D({ motion, reaction, onInteract, pose='idle', facing=0, onMove, onGrab, onDrop }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const controls = useRef<{ rotate: (dx: number, dy: number) => void; react: () => void; redraw: () => void } | null>(null);
   const pointer = useRef<{ x: number; y: number; dragged: boolean } | null>(null);
   const suppressClick = useRef(false);
   const [ready, setReady] = useState(false);
+  const [renderMode,setRenderMode]=useState<'loading'|'webgl2'|'vector'>('loading');
   const motionRef = useRef(motion);
+  const poseRef = useRef(pose), facingRef = useRef(facing);
+  poseRef.current = pose; facingRef.current = facing;
   const interactRef = useRef(onInteract);
   interactRef.current = onInteract;
   useEffect(() => { motionRef.current = motion; controls.current?.redraw(); }, [motion]);
+  useEffect(() => { controls.current?.redraw(); }, [pose, facing]);
   useEffect(() => { if (reaction) controls.current?.react(); }, [reaction]);
 
   useEffect(() => {
@@ -23,7 +29,7 @@ export default function Wilkins3D({ motion, reaction, onInteract }: Props) {
     if (!node) return;
     void import('three').then(THREE => {
       if (!live) return;
-      if (!node.getContext('webgl2')) return;
+      if (!node.getContext('webgl2')) {setRenderMode('vector');return;}
       try {
         const renderer = new THREE.WebGLRenderer({ canvas: node, alpha: true, antialias: true, powerPreference: 'low-power' });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
@@ -91,8 +97,10 @@ export default function Wilkins3D({ motion, reaction, onInteract }: Props) {
         plank.quadraticCurveTo(.59, -.05, .52, .04); plank.lineTo(-.49, .09);
         plank.quadraticCurveTo(-.65, .05, -.49, -.09);
         const footGeometry = new THREE.ExtrudeGeometry(plank, { depth: .10, bevelEnabled: true, bevelSize: .06, bevelThickness: .04, bevelSegments: 2 });
+        const feet: InstanceType<typeof THREE.Mesh>[] = [];
         for (const [x, angle] of [[-.25, .14], [.26, -.15]]) {
           const foot = new THREE.Mesh(footGeometry, wood); foot.position.set(x, .19, .10); foot.rotation.z = angle; body.add(foot);
+          feet.push(foot);
         }
 
         const leftEye = new THREE.Group(), rightEye = new THREE.Group();
@@ -142,29 +150,43 @@ export default function Wilkins3D({ motion, reaction, onInteract }: Props) {
         }
         const shadow = new THREE.Mesh(new THREE.CircleGeometry(.86, 32), new THREE.MeshBasicMaterial({ color: 0x344551, transparent: true, opacity: .16, depthWrite: false }));
         shadow.rotation.x = -Math.PI / 2; shadow.scale.y = .43; shadow.position.y = .055; scene.add(shadow);
+        const book = new THREE.Group(), coverMaterial = new THREE.MeshStandardMaterial({color:0x345c73,roughness:.86});
+        book.position.set(0,1.86,.58);body.add(book);
+        for(const side of [-1,1]){
+          const half=new THREE.Group();half.position.x=side*.22;half.rotation.y=side*-.25;half.rotation.z=side*.10;book.add(half);
+          const cover=new THREE.Mesh(new THREE.BoxGeometry(.48,.54,.05),coverMaterial);half.add(cover);
+          const pages=new THREE.Mesh(new THREE.BoxGeometry(.43,.48,.07),plastic);pages.position.z=.04;half.add(pages);
+        }
 
         let yaw = -.10, targetYaw = -.10, pitch = 0, targetPitch = 0, pulse = 0, frame = 0;
-        let active = true, rendered = false;
+        let active = true, rendered = false, lastFrame = 0;
         const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)');
         const draw = (time: number) => {
+          frame = 0;
           if (!active || document.hidden) return;
           const animated = motionRef.current && !prefersReduced.matches;
+          if (animated && time-lastFrame < 32) { frame=requestAnimationFrame(draw); return; }
+          lastFrame=time;
           const t = time / 1000;
+          const action=poseRef.current, walking=animated&&action==='walk', asleep=action==='sleep';
+          book.visible=action==='read';
+          const stride=walking?Math.sin(t*15):0;
           yaw += (targetYaw - yaw) * .13;
           pitch += (targetPitch - pitch) * .13;
-          body.rotation.y = yaw + (animated ? Math.sin(t * .85) * .042 : 0);
-          body.rotation.x = pitch;
-          body.rotation.z = animated ? Math.sin(t * 1.3) * .022 + pulse * .055 : 0;
-          body.position.y = animated ? Math.sin(t * 1.8) * .047 + pulse * .10 : 0;
-          rightArm.rotation.z = animated ? Math.sin(t * 2.4) * .08 + pulse * Math.sin(t * 22) * .38 : 0;
-          leftArm.rotation.z = animated ? Math.sin(t * 1.65) * .035 : 0;
-          const blink = animated && Math.sin(t * 1.37) > .997 ? .15 : 1;
+          body.rotation.y = yaw + facingRef.current*.46 + (animated ? Math.sin(t * .85) * .042 : 0);
+          body.rotation.x = pitch+(action==='read'?.10:0);
+          body.rotation.z = asleep?-.12:walking?stride*.065:animated ? Math.sin(t * 1.3) * .022 + pulse * .055 : 0;
+          body.position.y = walking?Math.abs(stride)*.12:animated ? Math.sin(t * 1.8) * .047 + pulse * .10 + (action==='celebrate'?Math.abs(Math.sin(t*8))*.20:0) : 0;
+          rightArm.rotation.z = !animated?0:action==='drag'?-.85:action==='think'?-.62:action==='wave'||action==='celebrate'?-.3+Math.sin(t*16)*.30:walking?stride*.22:Math.sin(t*2.4)*.08 + pulse*Math.sin(t*22)*.38;
+          leftArm.rotation.z = !animated?0:action==='drag'?.8:walking?-stride*.22:Math.sin(t*1.65)*.035;
+          for(let i=0;i<feet.length;i++){feet[i].rotation.x=walking?stride*(i?-.4:.4):0;feet[i].position.y=.19+(walking?Math.max(0,stride*(i?-1:1))*.13:0)}
+          const blink = asleep?.08:animated && Math.sin(t * 1.37) > .997 ? .15 : 1;
           leftEye.scale.y = rightEye.scale.y = blink;
           mouth.scale.y = 1 + pulse * .18;
-          brow.rotation.z = pulse * -.07;
+          brow.rotation.z = pulse * -.07+(action==='think'?-.13:0);
           pulse *= .93;
           renderer.render(scene, camera);
-          if (!rendered) { rendered = true; setReady(true); }
+          if (!rendered) { rendered = true; setReady(true);setRenderMode('webgl2'); }
           if (animated || Math.abs(targetYaw - yaw) > .001 || Math.abs(targetPitch - pitch) > .001 || pulse > .01) frame = requestAnimationFrame(draw);
           else frame = 0;
         };
@@ -179,7 +201,7 @@ export default function Wilkins3D({ motion, reaction, onInteract }: Props) {
         const observer = new ResizeObserver(resize); observer.observe(node);
         const visibility = () => redraw(); document.addEventListener('visibilitychange', visibility);
         const reduce = () => redraw(); prefersReduced.addEventListener('change', reduce);
-        const contextLost = (event: Event) => { event.preventDefault(); active = false; cancelAnimationFrame(frame); setReady(false); };
+        const contextLost = (event: Event) => { event.preventDefault(); active = false; cancelAnimationFrame(frame); setReady(false);setRenderMode('vector'); };
         node.addEventListener('webglcontextlost', contextLost);
         controls.current = {
           rotate(dx, dy) { targetYaw = Math.max(-1.05, Math.min(1.05, targetYaw + dx * .010)); targetPitch = Math.max(-.25, Math.min(.25, targetPitch + dy * .006)); redraw(); },
@@ -196,24 +218,24 @@ export default function Wilkins3D({ motion, reaction, onInteract }: Props) {
             if (object.geometry !== unitSphere) object.geometry.dispose();
           });
           unitSphere.dispose();
-          for (const material of [plastic, clay, eyeWhite, pupils, blue, red, redFiber, wood, innerMouth, shadow.material]) material.dispose();
+          for (const material of [plastic, clay, eyeWhite, pupils, blue, red, redFiber, wood, innerMouth, coverMaterial, shadow.material]) material.dispose();
           renderer.dispose();
         };
-      } catch { setReady(false); }
-    }).catch(() => { if (live) setReady(false); });
+      } catch(error) { setReady(false);setRenderMode('vector');console.debug('Wilkins renderer fallback',error); }
+    }).catch(() => { if (live) {setReady(false);setRenderMode('vector');} });
     return () => { live = false; cleanup(); };
   }, []);
 
-  return <button type="button" className="wilkins-3d" aria-label="Вилкинс: нажать для ответа или повернуть жестом" onClick={() => {
+  return <button type="button" className="wilkins-3d" data-renderer={renderMode} data-pose={pose} data-facing={facing} aria-label={onMove?'Вилкинс — позвать или перетащить':'Вилкинс: нажать для ответа или повернуть жестом'} onClick={() => {
     if (suppressClick.current) { suppressClick.current = false; return; }
     interactRef.current();
   }} onPointerDown={event => { suppressClick.current = false; pointer.current = { x: event.clientX, y: event.clientY, dragged: false }; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={event => {
     const drag = pointer.current; if (!drag) return;
     const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
-    if (Math.abs(dx) + Math.abs(dy) > 2) { drag.dragged = true; controls.current?.rotate(dx, dy); if (!ready) { const fallback = event.currentTarget.querySelector<SVGSVGElement>('.wilkins-illustration'); fallback?.style.setProperty('--illustration-turn', `${Math.max(-15,Math.min(15,(event.clientX - event.currentTarget.getBoundingClientRect().left - event.currentTarget.clientWidth / 2) / 10))}deg`); } }
+    if (Math.abs(dx) + Math.abs(dy) > 2) { if(!drag.dragged)onGrab?.();drag.dragged = true;if(onMove)onMove(dx,dy);else {controls.current?.rotate(dx, dy); if (!ready) { const fallback = event.currentTarget.querySelector<SVGSVGElement>('.wilkins-illustration'); fallback?.style.setProperty('--illustration-turn', `${Math.max(-15,Math.min(15,(event.clientX - event.currentTarget.getBoundingClientRect().left - event.currentTarget.clientWidth / 2) / 10))}deg`); } } }
     drag.x = event.clientX; drag.y = event.clientY;
-  }} onPointerUp={() => { suppressClick.current = !!pointer.current?.dragged; pointer.current = null; }} onPointerCancel={() => { pointer.current = null; }}>
+  }} onPointerUp={() => { suppressClick.current = !!pointer.current?.dragged;if(pointer.current?.dragged)onDrop?.();pointer.current = null; }} onPointerCancel={() => { if(pointer.current?.dragged)onDrop?.();pointer.current = null; }}>
     <canvas ref={canvas} aria-hidden="true" style={{ opacity: ready ? 1 : 0 }}/>
-    {!ready && <WilkinsIllustration motion={motion} reaction={reaction}/>}
+    {!ready && <WilkinsIllustration motion={motion} reaction={reaction} pose={pose} facing={facing}/>}
   </button>;
 }
