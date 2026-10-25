@@ -103,9 +103,15 @@ export default function Wilkins3D({ motion, reaction, onInteract }: Props) {
         bead(rightEye, pupils, [.36, 3.34, .39], [.105, .13, .07]);
         bead(leftEye, eyeWhite, [-.46, 3.44, .504], [.036, .045, .014]);
         bead(rightEye, eyeWhite, [.32, 3.39, .46], [.021, .025, .009]);
-        tube(body, [[-.59, 3.88, .29], [-.39, 4.03, .34], [-.03, 4.06, .34], [.35, 3.94, .29], [.54, 3.82, .27]], .059, red, 48);
-        bead(body, innerMouth, [0, 2.94, .305], [.38, .14, .034]);
-        tube(body, [[-.42, 3.03, .33], [-.33, 2.88, .39], [-.07, 2.86, .41], [.14, 2.90, .39], [.36, 3.05, .32], [.43, 2.97, .29], [.36, 2.82, .37], [.06, 2.77, .41], [-.25, 2.82, .39], [-.42, 3.03, .33]], .07, blue, 60);
+        leftEye.position.y = 3.35; rightEye.position.y = 3.36;
+        for (const eye of [leftEye, rightEye]) for (const part of eye.children) part.position.y -= eye.position.y;
+        const brow = new THREE.Group(), mouth = new THREE.Group(); body.add(brow, mouth);
+        tube(brow, [[-.59, 3.88, .29], [-.39, 4.03, .34], [-.03, 4.06, .34], [.35, 3.94, .29], [.54, 3.82, .27]], .059, red, 48);
+        bead(mouth, innerMouth, [0, 2.94, .305], [.38, .14, .034]);
+        tube(mouth, [[-.42, 3.03, .33], [-.33, 2.88, .39], [-.07, 2.86, .41], [.14, 2.90, .39], [.36, 3.05, .32], [.43, 2.97, .29], [.36, 2.82, .37], [.06, 2.77, .41], [-.25, 2.82, .39], [-.42, 3.03, .33]], .07, blue, 60);
+        brow.position.y = 3.95; mouth.position.y = 2.92;
+        for (const part of brow.children) part.position.y -= brow.position.y;
+        for (const part of mouth.children) part.position.y -= mouth.position.y;
 
         const leftArm = new THREE.Group(), rightArm = new THREE.Group();
         leftArm.position.set(-.10, 1.85, .06); rightArm.position.set(.10, 1.85, .06);
@@ -154,6 +160,8 @@ export default function Wilkins3D({ motion, reaction, onInteract }: Props) {
           leftArm.rotation.z = animated ? Math.sin(t * 1.65) * .035 : 0;
           const blink = animated && Math.sin(t * 1.37) > .997 ? .15 : 1;
           leftEye.scale.y = rightEye.scale.y = blink;
+          mouth.scale.y = 1 + pulse * .18;
+          brow.rotation.z = pulse * -.07;
           pulse *= .93;
           renderer.render(scene, camera);
           if (!rendered) { rendered = true; setReady(true); }
