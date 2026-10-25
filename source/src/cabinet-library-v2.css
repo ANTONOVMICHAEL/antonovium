@@ -148,7 +148,7 @@
  .cabinet-v3-current-head>span,.cabinet-v3-row-head>span{font-size:11px}
  .cabinet-v3-current-head button{font-size:12px;white-space:normal;text-align:right}
  .cabinet-v3-source{padding:27px 20px 24px;min-height:300px}
- .cabinet-v3-source h2{font-size:clamp(26px,7.8vw,39px)}
+ .cabinet-v3-source h2{font-size:clamp(23px,6.6vw,30px);overflow-wrap:break-word;hyphens:auto}
  .cabinet-v3-primary{width:100%}
  .cabinet-v3-margin{padding:18px 20px 22px}
  .cabinet-v3-work{margin-top:25px}
