@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import WilkinsIllustration from './WilkinsIllustration';
 
 type Props = { motion: boolean; reaction: number; onInteract: () => void };
 
@@ -8,7 +9,7 @@ export default function Wilkins3D({ motion, reaction, onInteract }: Props) {
   const controls = useRef<{ rotate: (dx: number, dy: number) => void; react: () => void; redraw: () => void } | null>(null);
   const pointer = useRef<{ x: number; y: number; dragged: boolean } | null>(null);
   const suppressClick = useRef(false);
-  const [available, setAvailable] = useState(true);
+  const [ready, setReady] = useState(false);
   const motionRef = useRef(motion);
   const interactRef = useRef(onInteract);
   interactRef.current = onInteract;
@@ -22,7 +23,7 @@ export default function Wilkins3D({ motion, reaction, onInteract }: Props) {
     if (!node) return;
     void import('three').then(THREE => {
       if (!live) return;
-      if (!node.getContext('webgl2')) { setAvailable(false); return; }
+      if (!node.getContext('webgl2')) return;
       try {
         const renderer = new THREE.WebGLRenderer({ canvas: node, alpha: true, antialias: true, powerPreference: 'low-power' });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
@@ -137,7 +138,7 @@ export default function Wilkins3D({ motion, reaction, onInteract }: Props) {
         shadow.rotation.x = -Math.PI / 2; shadow.scale.y = .43; shadow.position.y = .055; scene.add(shadow);
 
         let yaw = -.10, targetYaw = -.10, pitch = 0, targetPitch = 0, pulse = 0, frame = 0;
-        let active = true;
+        let active = true, rendered = false;
         const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)');
         const draw = (time: number) => {
           if (!active || document.hidden) return;
@@ -155,6 +156,7 @@ export default function Wilkins3D({ motion, reaction, onInteract }: Props) {
           leftEye.scale.y = rightEye.scale.y = blink;
           pulse *= .93;
           renderer.render(scene, camera);
+          if (!rendered) { rendered = true; setReady(true); }
           if (animated || Math.abs(targetYaw - yaw) > .001 || Math.abs(targetPitch - pitch) > .001 || pulse > .01) frame = requestAnimationFrame(draw);
           else frame = 0;
         };
@@ -169,7 +171,7 @@ export default function Wilkins3D({ motion, reaction, onInteract }: Props) {
         const observer = new ResizeObserver(resize); observer.observe(node);
         const visibility = () => redraw(); document.addEventListener('visibilitychange', visibility);
         const reduce = () => redraw(); prefersReduced.addEventListener('change', reduce);
-        const contextLost = (event: Event) => { event.preventDefault(); active = false; cancelAnimationFrame(frame); setAvailable(false); };
+        const contextLost = (event: Event) => { event.preventDefault(); active = false; cancelAnimationFrame(frame); setReady(false); };
         node.addEventListener('webglcontextlost', contextLost);
         controls.current = {
           rotate(dx, dy) { targetYaw = Math.max(-1.05, Math.min(1.05, targetYaw + dx * .010)); targetPitch = Math.max(-.25, Math.min(.25, targetPitch + dy * .006)); redraw(); },
@@ -189,21 +191,21 @@ export default function Wilkins3D({ motion, reaction, onInteract }: Props) {
           for (const material of [plastic, clay, eyeWhite, pupils, blue, red, redFiber, wood, innerMouth, shadow.material]) material.dispose();
           renderer.dispose();
         };
-      } catch { setAvailable(false); }
-    }).catch(() => { if (live) setAvailable(false); });
+      } catch { setReady(false); }
+    }).catch(() => { if (live) setReady(false); });
     return () => { live = false; cleanup(); };
   }, []);
 
   return <button type="button" className="wilkins-3d" aria-label="Вилкинс: нажать для ответа или повернуть жестом" onClick={() => {
     if (suppressClick.current) { suppressClick.current = false; return; }
     interactRef.current();
-  }} onPointerDown={event => { pointer.current = { x: event.clientX, y: event.clientY, dragged: false }; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={event => {
+  }} onPointerDown={event => { suppressClick.current = false; pointer.current = { x: event.clientX, y: event.clientY, dragged: false }; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={event => {
     const drag = pointer.current; if (!drag) return;
     const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
-    if (Math.abs(dx) + Math.abs(dy) > 2) { drag.dragged = true; controls.current?.rotate(dx, dy); }
+    if (Math.abs(dx) + Math.abs(dy) > 2) { drag.dragged = true; controls.current?.rotate(dx, dy); if (!ready) { const fallback = event.currentTarget.querySelector<SVGSVGElement>('.wilkins-illustration'); fallback?.style.setProperty('--illustration-turn', `${Math.max(-15,Math.min(15,(event.clientX - event.currentTarget.getBoundingClientRect().left - event.currentTarget.clientWidth / 2) / 10))}deg`); } }
     drag.x = event.clientX; drag.y = event.clientY;
   }} onPointerUp={() => { suppressClick.current = !!pointer.current?.dragged; pointer.current = null; }} onPointerCancel={() => { pointer.current = null; }}>
-    <canvas ref={canvas} aria-hidden="true" style={{ display: available ? 'block' : 'none' }}/>
-    {!available && <span className="wilkins-3d-fallback" aria-hidden="true">В</span>}
+    <canvas ref={canvas} aria-hidden="true" style={{ opacity: ready ? 1 : 0 }}/>
+    {!ready && <WilkinsIllustration motion={motion} reaction={reaction}/>}
   </button>;
 }
