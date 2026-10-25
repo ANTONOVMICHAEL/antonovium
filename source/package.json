@@ -22,7 +22,8 @@
     "@supabase/supabase-js": "2.118.0",
     "pdfjs-dist": "6.4.299",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "3.1152.0",
@@ -30,6 +31,7 @@
     "@napi-rs/canvas": "1.0.11",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "@types/three": "^0.186.0",
     "happy-dom": "^21.0.3",
     "typescript": "5.9.3",
     "vite": "6.4.4"
